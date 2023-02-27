@@ -1,0 +1,76 @@
+Screen {
+    background: $surface-darken-1;
+}
+
+#parent-container {
+    width:100%;
+    height:100%;
+}
+
+#left {    
+    display: none;
+    background: $boost;
+    scrollbar-gutter: stable;
+    overflow: auto;
+    color: auto;
+    width: 25%;
+    height: 100%;
+    dock: left;
+    border: blue;
+}
+
+#right {
+    /* dock: right; */
+}
+
+#top-right {
+    height: 100%;
+    background: $panel;
+    border: mediumvioletred;
+    /* overflow: auto;
+    width: auto; */
+}
+
+#top-right > Static {
+    /* width: auto; */
+    height: 100%;
+    margin-right: 1;
+    background: $boost;
+}
+
+#bottom-right {
+    height: 100%;
+    layout: grid;
+    grid-size: 3;
+    grid-columns: 1fr;
+    grid-rows: 1fr;
+    grid-gutter: 1;
+    background: $panel;
+    border: greenyellow;
+}
+
+#bottom-right-final {
+    column-span: 2;
+}
+
+#bottom-right > Static {
+    height: 100%;
+    background: $boost;
+}
+
+#summary-table {
+    width: 100%;
+}
+
+FreqText.-show-clients #left {
+    display: block;        
+    max-width: 50%;
+}
+
+#info-view {
+    overflow: auto scroll;  
+    min-width: 100%;        
+}
+#info {
+    width: auto;    
+}
