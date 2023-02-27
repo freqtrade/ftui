@@ -1,9 +1,19 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 """
-FreqText textual user interface (TUI)
+███████╗████████╗██╗   ██╗██╗
+██╔════╝╚══██╔══╝██║   ██║██║
+█████╗     ██║   ██║   ██║██║
+██╔══╝     ██║   ██║   ██║██║
+██║        ██║   ╚██████╔╝██║
+╚═╝        ╚═╝    ╚═════╝ ╚═╝
+
+Freqtrade Textual User Interface (FTUI)
 
 Run with:
 
-    python freqtext.py -y yaml.file
+    python3 ftui.py -y yaml.file
 
 """
 
@@ -33,9 +43,12 @@ from textual.widgets import Button, DataTable, Footer, Header, Static, Tree
 from textual.widgets.tree import TreeNode
 
 import rest_client as ftrc
+import ftui_client as ftuic
 
 uniqclients = {}
 client_dict = {}
+
+all_closed_trades = {}
 
 urlre = "^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
 dfmt = "%Y-%m-%d %H:%M:%S"
@@ -66,7 +79,6 @@ class FreqText(App):
         yield Header()
         yield Container(
             Container(
-                Static("Dashboard"),
                 Tree("Clients", id="client-view"),
                 id="left",
             ),
@@ -83,6 +95,12 @@ class FreqText(App):
         )
         yield Footer()
 
+    def on_mount(self) -> None:
+        tree = self.query_one(Tree)
+        self.add_clients(tree.root, client_dict)
+        tree.root.expand()
+        tree.focus()
+
     @classmethod
     def add_clients(self, node: TreeNode, clients: dict) -> None:
         from rich.highlighter import ReprHighlighter
@@ -96,15 +114,15 @@ class FreqText(App):
                 new_node._label = Text(i)
 
         def add_node(name: str, node: TreeNode, data: object) -> None:
-            if isinstance(data, dict):
+            if isinstance(data, dict): # client_dict
                 node._label = Text(f"{name}")
-                for cl_name, cl_info in data.items():
+                for cl_name, ftui_client in data.items():
                     new_node = node.add("")
-                    add_node(f"{cl_name}", new_node, cl_info)
-            elif isinstance(data, list):
-                node._label = Text(f"{name}")                
+                    add_node(f"{cl_name}", new_node, ftui_client)
+            elif isinstance(data, ftuic.FTUIClient): # actual client
+                node._label = Text(f"{name}")
                 new_node = node.add("")
-                add_leaf_nodes(f"{data[3]}", new_node, ["Summary", "Closed Trades", "Open Trades"])
+                add_leaf_nodes(f"{data.name}", new_node, ["Summary", "Closed Trades", "Open Trades"])
 
         add_node("Clients", node, clients)
 
@@ -118,7 +136,7 @@ class FreqText(App):
                 node_label = str(event.node.label)
                 parent_name = str(event.node.parent.parent.label)
                 
-                if str(node_label) == "Summary":
+                if node_label == "Summary":
                     self.build_client_summary(tr_cont, client_dict[parent_name])
                 elif node_label == "Closed Trades":
                     self.build_closed_trade_summary(tr_cont, client_dict[parent_name])
@@ -143,13 +161,13 @@ class FreqText(App):
             raise e
         container.mount(dt)
 
-    def build_closed_trade_summary(self, container, client_info):
+    def build_closed_trade_summary(self, container, ftuic):
         row_data = [
             ("Pair", "Profit %", "Profit", "Dur.", "Entry", "Exit"),
         ]
         fmt = "%Y-%m-%d %H:%M:%S"
-        client = client_info[0]
-        trades = get_all_closed_trades(client)
+
+        trades = ftuic.get_all_closed_trades()
         if trades is not None:
             for t in trades[:20]:
                 otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
@@ -167,7 +185,7 @@ class FreqText(App):
 
         self.replace_summary_table(container, row_data)
 
-    def build_client_summary(self, container, client_info):    
+    def build_client_summary(self, container, ftuic):
         row_data = [
             ("lane", "swimmer", "country", "time"),
             # (4, "Joseph Schooling", "Singapore", 50.39),
@@ -181,119 +199,15 @@ class FreqText(App):
             # (10, "Darren Burns", "Scotland", 51.84),
         ]
 
-        client = client_info[0]
+        # client = client_info[0]
         self.replace_summary_table(container, row_data)
 
-    def on_mount(self) -> None:
-        tree = self.query_one(Tree)
-        self.add_clients(tree.root, client_dict)
-        tree.root.expand()
-
-def setup_client(name=None, config_path=None, url=None, port=None, username=None, password=None):
-    if url is None:
-        config = ftrc.load_config(config_path)
-        url = config.get('api_server', {}).get('listen_ip_address', '127.0.0.1')
-        port = config.get('api_server', {}).get('listen_port', '8080')
-        
-        if username is None and password is None:
-            username = config.get('api_server', {}).get('username')
-            password = config.get('api_server', {}).get('password')
-    else:
-        if config_path is not None:
-            config = ftrc.load_config(config_path)
-            
-            if username is None and password is None:
-                username = config.get('api_server', {}).get('username')
-                password = config.get('api_server', {}).get('password')
-
-    if name is None:
-        name = f"{url}:{port}"
-    
-    server_url = f"http://{url}:{port}"
-
-    client = ftrc.FtRestClient(server_url, username, password)
-    
-    if client is not None:
-        c = client.version()
-        if c is not None:
-            if "detail" in c.keys() and (c["detail"] == 'Unauthorized'):
-                raise Exception(f"Could not connect to bot [{url}:{port}]: Unauthorised")
-        else:
-            raise Exception(f"Could not connect to bot [{url}:{port}]: Check that http://{url}:{port}/api/v1/ping works in a browser, and check any firewall settings.")
-    else:
-        raise Exception(f"Could not connect to bot [{url}:{port}]: Error creating client")
-
-    current_config = client.show_config()
-    bot_state = current_config['state']
-    runmode = current_config['runmode']
-    strategy = current_config['strategy']
-    stoploss = abs(current_config['stoploss']) * 100
-    max_open_trades = current_config['max_open_trades']
-    stake_amount = current_config['stake_amount']
-    
-    stuff = [client, url, port, strategy, bot_state, runmode, stoploss, max_open_trades, stake_amount]
-    
-    print(f"Setting up {name} version {c['version']} at {server_url}: {strategy} {bot_state} {runmode}")
-    sleep(1)
-    
-    if url not in uniqclients:
-        uniqclients[url] = stuff
-    
-    return name, stuff
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
-
-
-def get_all_closed_trades(cl) -> dict:
-    ps = cl.profit()
-    
-    if ps is not None:
-        num_all_closed_trades = int(ps['closed_trade_count'])
-
-        m, r = divmod(int(num_all_closed_trades), 500)
-        trades = []
-
-        if m > 1:
-            ## get last 500
-            cltrades = cl.trades()
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades.extend(clt)
-
-            for i in range(1, m+1):
-                cltrades = cl.trades(offset=(500 * i))
-                if cltrades is not None and 'trades' in cltrades:
-                    clt = cltrades['trades']
-                    if clt is not None and len(clt) > 0:
-                        trades.extend(clt)                        
-
-        elif m == 1:
-            cltrades = cl.trades()
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades.extend(clt)                    
-
-            cltrades = cl.trades(offset=500)
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades.extend(clt)                    
-        else:
-            cltrades = cl.trades()
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades = clt
-        
-        trades.reverse()
-    
-    return trades
 
 def setup():
     parser = argparse.ArgumentParser()
@@ -356,10 +270,10 @@ def setup():
             for s in args.servers:
                 try:
                     if config is not None:
-                        name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
+                        ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
                     else:
-                        name, client = setup_client(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
-                    client_dict[name] = client
+                        ftui_client = ftuic.FTUIClient(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
+                    client_dict[ftui_client.name] = ftui_client
                 except Exception as e:
                     raise RuntimeError('Cannot create freqtrade client') from e
         else:
@@ -378,18 +292,18 @@ def setup():
 
                     try:
                         if config is not None:
-                            name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
+                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
                         else:
-                            name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass)
-                        client_dict[name] = client
+                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass)
+                        client_dict[ftui_client.name] = ftui_client
                     except Exception as e:
                         raise RuntimeError("Cannot create freqtrade client") from e
                 else:
                     raise Exception("Cannot parse server option. Please use [name]user:pass@servername:port")
     elif config is not None:
         try:
-            name, client = setup_client(config_path=config)
-            client_dict[name] = client
+            ftui_client = ftuic.FTUIClient(config_path=config)
+            client_dict[ftui_client.name] = ftui_client
         except Exception as e:
             raise RuntimeError('Cannot create freqtrade client') from e
 
