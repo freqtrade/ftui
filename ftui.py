@@ -39,16 +39,13 @@ from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import var
-from textual.widgets import Button, DataTable, Footer, Header, Static, Tree
+from textual.widgets import Button, DataTable, Footer, Header, Static, TextLog, Tree, Markdown, TabbedContent, TabPane
 from textual.widgets.tree import TreeNode
 
 import rest_client as ftrc
-import ftui_client as ftuic
 
 uniqclients = {}
 client_dict = {}
-
-all_closed_trades = {}
 
 urlre = "^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
 dfmt = "%Y-%m-%d %H:%M:%S"
@@ -67,6 +64,23 @@ class FreqText(App):
 
     show_clients = var(True)
 
+    func_map = {
+        "open-trades-tab":"update_open_trades_tab",
+        "closed-trades-tab":"update_closed_trades_tab",
+        "summary-trades-tab":"update_summary_trades_tab",
+        "logs-tab":"update_logs_tab",
+        "help-tab":"update_help_tab"
+    }
+
+    def debug(self, msg):
+        debuglog = self.query_one("#debug-log")
+        debuglog.write(msg)
+        
+    def tab_select_func(self, tab_id, bot_id):
+        self.debug(f"Attempting select {tab_id} {bot_id}")
+        if tab_id in self.func_map:
+            getattr(self, self.func_map[tab_id])(tab_id, bot_id)
+
     def watch_show_clients(self, show_clients: bool) -> None:
         self.set_class(show_clients, "-show-clients")
 
@@ -75,99 +89,114 @@ class FreqText(App):
             not self.show_clients
         )
 
+    def action_show_tab(self, tab: str) -> None:
+        self.get_child_by_type(TabbedContent).active = tab
+        tree = self.query_one(Tree)
+        bot_id = str(tree.cursor_node.label)
+        self.update_tab(active_tab_id, bot_id)        
+
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Container(
-            Container(
-                Tree("Clients", id="client-view"),
-                id="left",
-            ),
-            Container(
-                Horizontal(
-                    id="top-right",
-                ),
-                Container(
-                    id="bottom-right",
-                ),
-                id="right",
-            ),
-            id="parent-container"
-        )
-        yield Footer()
 
-    def on_mount(self) -> None:
-        tree = self.query_one(Tree)
-        self.add_clients(tree.root, client_dict)
-        tree.root.expand()
-        tree.focus()
+        with Container(id="parent-container"):
+            with Container(id="left"):
+                yield Static("Dashboard")
+                yield Tree("Clients", id="client-view")
+            with Container(id="right"):
+                with TabbedContent(initial="open-trades-tab"):
+                    #with TabPane("Summary", id="all-bot-summary-tab")
+                    #    yield DataTable(id="all-bot-summary-table")
+
+                    with TabPane("Open Trades", id="open-trades-tab"):
+                        yield DataTable(id="open-trades-table")
+
+                    with TabPane("Closed Trades", id="closed-trades-tab"):
+                        yield DataTable(id="closed-trades-table")
+                    
+                    with TabPane("Trade Summary", id="summary-trades-tab"):
+                        yield DataTable(id="summary-trades-table")
+                    
+                    with TabPane("Logs", id="logs-tab"):
+                        yield TextLog(id="log")
+
+                    with TabPane("Help", id="help-tab"):
+                        yield Markdown("#Hello", id="help")
+
+                    with TabPane("Debug", id="debug-tab"):
+                        yield TextLog(id="debug-log")
+
+        yield Footer()
 
     @classmethod
     def add_clients(self, node: TreeNode, clients: dict) -> None:
         from rich.highlighter import ReprHighlighter
         highlighter = ReprHighlighter()
 
-        def add_leaf_nodes(name: str, node: TreeNode, leaves: list) -> None:
-            node._label = Text(f"{name}")
-            for i in leaves:
-                new_node = node.add("")
-                new_node._allow_expand = False
-                new_node._label = Text(i)
-
         def add_node(name: str, node: TreeNode, data: object) -> None:
-            if isinstance(data, dict): # client_dict
+            if isinstance(data, dict):
                 node._label = Text(f"{name}")
-                for cl_name, ftui_client in data.items():
+                for cl_name, cl_info in data.items():
                     new_node = node.add("")
-                    add_node(f"{cl_name}", new_node, ftui_client)
-            elif isinstance(data, ftuic.FTUIClient): # actual client
+                    add_node(f"{cl_name}", new_node, cl_info)
+            elif isinstance(data, list):
                 node._label = Text(f"{name}")
-                new_node = node.add("")
-                add_leaf_nodes(f"{data.name}", new_node, ["Summary", "Closed Trades", "Open Trades"])
+                node._allow_expand = False
 
         add_node("Clients", node, clients)
 
     def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
         event.stop()
 
-        if len(event.node.children) == 0:
-            tr_cont = self.query_one("#top-right", Horizontal)
-            br_cont = self.query_one("#bottom-right", Container)
-            try:
-                node_label = str(event.node.label)
-                parent_name = str(event.node.parent.parent.label)
-                
-                if node_label == "Summary":
-                    self.build_client_summary(tr_cont, client_dict[parent_name])
-                elif node_label == "Closed Trades":
-                    self.build_closed_trade_summary(tr_cont, client_dict[parent_name])
-                #elif node_label == "Open Trades":
-                    # node_view.update(Text(node_label))
+        active_tab_id = self.query_one("#right").get_child_by_type(TabbedContent).active
+        bot_id = str(event.node.label)
+        
+        self.update_tab(active_tab_id, bot_id)
 
-                self.sub_title = f"{parent_name} - {node_label}"
-            except Exception as e:
-                tr_cont.update(Traceback(theme="github-dark", width=None))
-                self.sub_title = "ERROR"
+    def update_tab(self, tab_id, bot_id):
+        self.tab_select_func(tab_id, bot_id)
 
-    def replace_summary_table(self, container, data):
-        for st in container.query("#summary-table"):
-            st.remove()
+    def update_open_trades_tab(self, tab_id, bot_id):
+        cl = client_dict[bot_id]
+        return "foo"
+
+    def update_closed_trades_tab(self, tab_id, bot_id):
+        cl = client_dict[bot_id]
+        data = self.build_closed_trade_summary(cl)
+        tab = next(self.query(f"#{tab_id}").results(TabPane))
+        self.replace_summary_table(data, tab)
+
+    def update_summary_trades_tab(self, tab_id, bot_id):
+        cl = client_dict[bot_id]
+        return "foo"
+
+    def update_logs_tab(self, tab_id, bot_id):
+        cl = client_dict[bot_id]
+        tab = next(self.query(f"#{tab_id}").results(TabPane))
+        tab.query_one("#log").write(f"Logging {tab_id} {bot_id}")
+
+    def update_help_tab(self, tab_id, bot_id):
+        cl = client_dict[bot_id]
+        return "foo"
+
+    def replace_summary_table(self, data, tab):
+        dt = tab.get_child_by_type(DataTable)
+        dt.clear(columns=True)
 
         rows = iter(data)
-        dt = DataTable(id="summary-table")
         try:
             dt.add_columns(*next(rows))
             dt.add_rows(rows)
         except Exception as e:
             raise e
-        container.mount(dt)
+        dt.refresh()
 
-    def build_closed_trade_summary(self, container, ftuic):
+    def build_closed_trade_summary(self, client_info):
         row_data = [
             ("Pair", "Profit %", "Profit", "Dur.", "Entry", "Exit"),
         ]
         fmt = "%Y-%m-%d %H:%M:%S"
-
-        trades = ftuic.get_all_closed_trades()
+        client = client_info[0]
+        trades = get_all_closed_trades(client)
         if trades is not None:
             for t in trades[:20]:
                 otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
@@ -183,9 +212,9 @@ class FreqText(App):
                     f"{t['exit_reason']}"
                 ))
 
-        self.replace_summary_table(container, row_data)
+        return row_data
 
-    def build_client_summary(self, container, ftuic):
+    def build_client_summary(self, container, client_info):    
         row_data = [
             ("lane", "swimmer", "country", "time"),
             # (4, "Joseph Schooling", "Singapore", 50.39),
@@ -199,15 +228,123 @@ class FreqText(App):
             # (10, "Darren Burns", "Scotland", 51.84),
         ]
 
-        # client = client_info[0]
+        client = client_info[0]
         self.replace_summary_table(container, row_data)
 
+    def on_mount(self) -> None:
+        tree = self.query_one(Tree)
+        self.add_clients(tree.root, client_dict)
+        tree.root.expand()
+        tree.focus()
+
+        self.query_one("#debug-log").write(Text("Hello"))
+        
+
+def setup_client(name=None, config_path=None, url=None, port=None, username=None, password=None):
+    if url is None:
+        config = ftrc.load_config(config_path)
+        url = config.get('api_server', {}).get('listen_ip_address', '127.0.0.1')
+        port = config.get('api_server', {}).get('listen_port', '8080')
+        
+        if username is None and password is None:
+            username = config.get('api_server', {}).get('username')
+            password = config.get('api_server', {}).get('password')
+    else:
+        if config_path is not None:
+            config = ftrc.load_config(config_path)
+            
+            if username is None and password is None:
+                username = config.get('api_server', {}).get('username')
+                password = config.get('api_server', {}).get('password')
+
+    if name is None:
+        name = f"{url}:{port}"
+    
+    server_url = f"http://{url}:{port}"
+
+    client = ftrc.FtRestClient(server_url, username, password)
+    
+    if client is not None:
+        c = client.version()
+        if c is not None:
+            if "detail" in c.keys() and (c["detail"] == 'Unauthorized'):
+                raise Exception(f"Could not connect to bot [{url}:{port}]: Unauthorised")
+        else:
+            raise Exception(f"Could not connect to bot [{url}:{port}]: Check that http://{url}:{port}/api/v1/ping works in a browser, and check any firewall settings.")
+    else:
+        raise Exception(f"Could not connect to bot [{url}:{port}]: Error creating client")
+
+    current_config = client.show_config()
+    bot_state = current_config['state']
+    runmode = current_config['runmode']
+    strategy = current_config['strategy']
+    stoploss = abs(current_config['stoploss']) * 100
+    max_open_trades = current_config['max_open_trades']
+    stake_amount = current_config['stake_amount']
+    
+    stuff = [client, url, port, strategy, bot_state, runmode, stoploss, max_open_trades, stake_amount]
+    
+    print(f"Setting up {name} version {c['version']} at {server_url}: {strategy} {bot_state} {runmode}")
+    sleep(1)
+    
+    if url not in uniqclients:
+        uniqclients[url] = stuff
+    
+    return name, stuff
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+def get_all_closed_trades(cl) -> dict:
+    ps = cl.profit()
+    
+    if ps is not None:
+        num_all_closed_trades = int(ps['closed_trade_count'])
+
+        m, r = divmod(int(num_all_closed_trades), 500)
+        trades = []
+
+        if m > 1:
+            ## get last 500
+            cltrades = cl.trades()
+            if cltrades is not None and 'trades' in cltrades:
+                clt = cltrades['trades']
+                if clt is not None and len(clt) > 0:
+                    trades.extend(clt)
+
+            for i in range(1, m+1):
+                cltrades = cl.trades(offset=(500 * i))
+                if cltrades is not None and 'trades' in cltrades:
+                    clt = cltrades['trades']
+                    if clt is not None and len(clt) > 0:
+                        trades.extend(clt)                        
+
+        elif m == 1:
+            cltrades = cl.trades()
+            if cltrades is not None and 'trades' in cltrades:
+                clt = cltrades['trades']
+                if clt is not None and len(clt) > 0:
+                    trades.extend(clt)                    
+
+            cltrades = cl.trades(offset=500)
+            if cltrades is not None and 'trades' in cltrades:
+                clt = cltrades['trades']
+                if clt is not None and len(clt) > 0:
+                    trades.extend(clt)                    
+        else:
+            cltrades = cl.trades()
+            if cltrades is not None and 'trades' in cltrades:
+                clt = cltrades['trades']
+                if clt is not None and len(clt) > 0:
+                    trades = clt
+        
+        trades.reverse()
+    
+    return trades
 
 def setup():
     parser = argparse.ArgumentParser()
@@ -270,10 +407,10 @@ def setup():
             for s in args.servers:
                 try:
                     if config is not None:
-                        ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
+                        name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
                     else:
-                        ftui_client = ftuic.FTUIClient(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
-                    client_dict[ftui_client.name] = ftui_client
+                        name, client = setup_client(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
+                    client_dict[name] = client
                 except Exception as e:
                     raise RuntimeError('Cannot create freqtrade client') from e
         else:
@@ -292,18 +429,18 @@ def setup():
 
                     try:
                         if config is not None:
-                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
+                            name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
                         else:
-                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass)
-                        client_dict[ftui_client.name] = ftui_client
+                            name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass)
+                        client_dict[name] = client
                     except Exception as e:
                         raise RuntimeError("Cannot create freqtrade client") from e
                 else:
                     raise Exception("Cannot parse server option. Please use [name]user:pass@servername:port")
     elif config is not None:
         try:
-            ftui_client = ftuic.FTUIClient(config_path=config)
-            client_dict[ftui_client.name] = ftui_client
+            name, client = setup_client(config_path=config)
+            client_dict[name] = client
         except Exception as e:
             raise RuntimeError('Cannot create freqtrade client') from e
 

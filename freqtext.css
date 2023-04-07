@@ -2,6 +2,31 @@ Screen {
     background: $surface-darken-1;
 }
 
+TabbedContent {
+    height: 1fr;
+    /* border: blue; */
+}
+
+ContentSwitcher {
+    /* border: red; */
+    height: 1fr;
+}
+
+TabPane {
+    layout: vertical;    
+    /* border: mediumvioletred; */
+    width:100%;
+    height: 1fr
+}
+
+#debug-log {
+    height: 1fr;
+    width: 100%;
+    /* border: green; */
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
 #parent-container {
     width:100%;
     height:100%;
@@ -21,6 +46,9 @@ Screen {
 
 #right {
     /* dock: right; */
+    overflow: auto;
+    height: 1fr;
+    border: yellow;
 }
 
 #top-right {
