@@ -107,7 +107,7 @@ class FTUIClient():
         df.rename(columns = {'open':'Open', 'close':'Close', 'high':'High', 'low':'Low'}, inplace = True)        
         return df
 
-    def get_all_closed_trades(self) -> dict:
+    def get_all_closed_trades(self) -> list:
         cl = self.rest_client
         ps = cl.profit()
 
@@ -157,6 +157,29 @@ class FTUIClient():
                 self.prev_closed_trade_count = len(trades)
 
         return self.all_closed_trades
+
+    def get_open_trades(self) -> list:
+        cl = self.rest_client
+        ts = cl.status()
+
+        trades = []
+        if ts is not None:
+            return ts
+        return trades
+
+    def get_logs(self) -> str:
+        cl = self.rest_client
+        logjson = cl.logs(limit=100)
+        
+        logstr = ""
+        
+        if logjson is not None and "logs" in logjson:
+            logs = logjson['logs']
+    
+            for logline in logs:
+                logstr += f"{logline[0]} - {logline[2]} - {logline[3]} - {logline[4]}\n"
+            
+        return logstr
 
     def calc_risk(self):
         cl = self.rest_client

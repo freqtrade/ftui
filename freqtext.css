@@ -27,6 +27,14 @@ TabPane {
     scrollbar-gutter: stable;
 }
 
+#log {
+    height: 1fr;
+    width: 100%;
+    /* border: green; */
+    overflow: auto;
+    scrollbar-gutter: stable;    
+}
+
 #parent-container {
     width:100%;
     height:100%;
@@ -101,4 +109,51 @@ FreqText.-show-clients #left {
 }
 #info {
     width: auto;    
+}
+
+#info-dialog {
+    height: 100%;
+    width: 100%;
+    margin: 4 8;
+    background: $panel 50%;
+    color: $text;
+    border: tall rgba(255, 255, 255, 0.3);
+    padding: 1 2;
+    layout: grid;
+    grid-size: 3;
+    grid-columns: 2fr 1fr 1fr;
+}
+
+#dt-dialog {
+    height: 100%;
+    width: 100%;
+    margin: 4 8;
+    background: $panel 50%;
+    color: $text;
+    border: tall rgba(255, 255, 255, 0.3);
+    padding: 1 2;
+}
+
+#chart-dialog {
+    height: 100%;
+    width: 100%;
+    background: $panel 50%;
+    color: $text;
+    border: tall rgba(255, 255, 255, 0.3);
+}
+
+
+#plot-area {
+    height: 100%;
+    width: 100%;
+    border: round red;
+}
+
+.full-width {
+    width: 100%;
+    border: round #444;
+}
+
+.center-align {
+    align: center middle;
 }

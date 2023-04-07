@@ -46,7 +46,7 @@ from textual.widgets.tree import TreeNode
 import rest_client as ftrc
 import ftui_client as ftuic
 
-from ftui_screens import CandlestickScreen, TradeInfoScreen
+from ftui_screens import CandlestickScreen, TradeInfoScreen, ProfitChartPanel
 import plotext as f
 
 uniqclients = {}
@@ -73,6 +73,8 @@ class FreqText(App):
         "open-trades-tab":"update_open_trades_tab",
         "closed-trades-tab":"update_closed_trades_tab",
         "summary-trades-tab":"update_summary_trades_tab",
+        "tag-summary-tab":"update_tag_summary_tab",
+        "charts-tab":"update_charts_tab",
         "logs-tab":"update_logs_tab",
         "help-tab":"update_help_tab"
     }
@@ -85,6 +87,9 @@ class FreqText(App):
         self.debug(f"Attempting select {tab_id} {bot_id}")
         if tab_id in self.func_map:
             getattr(self, self.func_map[tab_id])(tab_id, bot_id)
+
+    def _get_tab(self, tab_id):
+        return next(self.query(f"#{tab_id}").results(TabPane))
 
     def watch_show_clients(self, show_clients: bool) -> None:
         self.set_class(show_clients, "-show-clients")
@@ -132,12 +137,18 @@ class FreqText(App):
                     
                     with TabPane("Trade Summary", id="summary-trades-tab"):
                         yield DataTable(id="summary-trades-table")
+
+                    with TabPane("Tag Summary", id="tag-summary-tab"):
+                        yield DataTable(id="tag-summary-table")
+                        
+                    with TabPane("Charts", id="charts-tab"):
+                        yield Container(id="chart")   
                     
                     with TabPane("Logs", id="logs-tab"):
                         yield TextLog(id="log")
 
-                    with TabPane("Help", id="help-tab"):
-                        yield Markdown("#Hello", id="help")
+                    # with TabPane("Help", id="help-tab"):
+                    #     yield Markdown("#Hello", id="help")
 
                     with TabPane("Debug", id="debug-tab"):
                         yield TextLog(id="debug-log")
@@ -174,26 +185,42 @@ class FreqText(App):
 
     def update_open_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
-        return "foo"
+        tab = self._get_tab(tab_id)
+        data = self.build_open_trade_summary(cl) 
+        self.replace_summary_table(data, tab)
 
     def update_closed_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
-        data = self.build_closed_trade_summary(cl)
-        tab = next(self.query(f"#{tab_id}").results(TabPane))
+        tab = self._get_tab(tab_id)
+        data = self.build_closed_trade_summary(cl) 
         self.replace_summary_table(data, tab)
 
     def update_summary_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
+        tab = self._get_tab(tab_id)
         return "foo"
+
+    def update_tag_summary_tab(self, tab_id, bot_id):
+        cl = client_dict[bot_id]
+        tab = self._get_tab(tab_id)
+        data = self.build_enter_tag_summary(cl)
+        self.replace_summary_table(data, tab)
+
+    def update_charts_tab(self, tab_id, bot_id):
+        cl = client_dict[bot_id]
+        tab = self._get_tab(tab_id)
+        chart = self.build_profit_chart(cl)
+        self.replace_chart(chart, tab)
 
     def update_logs_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
-        tab = next(self.query(f"#{tab_id}").results(TabPane))
-        tab.query_one("#log").write(f"Logging {tab_id} {bot_id}")
+        tab = self._get_tab(tab_id)
+        logs = cl.get_logs()
+        tab.query_one("#log").write(logs)
 
-    def update_help_tab(self, tab_id, bot_id):
-        cl = client_dict[bot_id]
-        return "foo"
+    # def update_help_tab(self, tab_id, bot_id):
+    #     cl = client_dict[bot_id]
+    #     return "foo"
 
     def replace_summary_table(self, data, tab):
         # if isinstance(data, Table):
@@ -212,6 +239,12 @@ class FreqText(App):
         except Exception as e:
             raise e
         dt.refresh()
+
+    def replace_chart(self, chart, tab):
+        chart_container = tab.get_child_by_type(Container)
+        for c in chart_container.children:
+            c.remove()
+        chart_container.mount(chart)
 
     def build_closed_trade_summary(self, ftuic):
         row_data = [
@@ -239,140 +272,150 @@ class FreqText(App):
 
         return row_data
 
-    def build_open_trade_summary(self, container, ftuic):
+    def build_open_trade_summary(self, ftuic):
         row_data = [
-            ("Pair", "Profit %", "Profit", "Dur.", "Entry", "Exit"),
+            ("ID", "Pair", "Profit %", "Profit", "Dur.", "S/L", "Entry"),
         ]
         fmt = "%Y-%m-%d %H:%M:%S"
 
-        trades = ftuic.get_all_closed_trades()
+        trades = ftuic.get_open_trades()
         if trades is not None:
             for t in trades[:20]:
                 otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
-                ctime = datetime.strptime(t['close_date'], fmt).astimezone(tz=timezone.utc)
+                ctime = datetime.now(tz=timezone.utc)
+                
+                pairstr = t['pair'] + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
                 rpfta = round(float(t['profit_abs']), 2)
-
+                t_dir = "S" if t['is_short'] else "L"
+                
                 row_data.append((
-                    f"{t['pair']}",
+                    f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
+                    f"{pairstr}",
                     f"[red]{t['profit_pct']}" if t['profit_pct'] <= 0 else f"[green]{t['profit_pct']}",
                     f"[red]{rpfta}" if rpfta <= 0 else f"[green]{rpfta}",
                     f"{str(ctime-otime).split('.')[0]}",
+                    f"{t_dir}",
                     f"{t['enter_tag']}",
-                    f"{t['exit_reason']}"
                 ))
 
-        self.replace_summary_table(container, row_data)
+        return row_data
 
-    def build_trades_summary(self, container, client_dict):
-        row_data = [
-            ("# Trades", "Open Profit", "W/L", "Winrate", "Exp.",
-             "Exp. Rate", "Med. W", "Med. L", "Total"),
-        ]
+    def build_profit_chart(self, ftuic):
+        pc = ProfitChartPanel()
+        pc.client = ftuic
+        pc.title = ftuic.name
+        return pc
 
-        all_open_profit = 0
-        all_profit = 0
-        all_wins = 0
-        all_losses = 0
+#     def build_trades_summary(self, ftuic):
+#         row_data = [
+#             ("# Trades", "Open Profit", "W/L", "Winrate", "Exp.",
+#              "Exp. Rate", "Med. W", "Med. L", "Total"),
+#         ]
+
+#         all_open_profit = 0
+#         all_profit = 0
+#         all_wins = 0
+#         all_losses = 0
         
-        for n, ftuic in client_dict.items():
-            cl = ftuic.rest_client
+#         for n, ftuic in ftuic.items():
+#             cl = ftuic.rest_client
 
-            tot_profit = 0
+#             tot_profit = 0
 
-            cls = cl.status()
-            if cls is not None:
-                for ot in cl.status():
-                    tot_profit = tot_profit + ot['profit_abs']
+#             cls = cl.status()
+#             if cls is not None:
+#                 for ot in cl.status():
+#                     tot_profit = tot_profit + ot['profit_abs']
             
-#            max_open_trades = ftuic.max_open_trades
-            #if (max_open_trades > 0):
-                #risk = ftuic.calc_risk()
+# #            max_open_trades = ftuic.max_open_trades
+#             #if (max_open_trades > 0):
+#                 #risk = ftuic.calc_risk()
             
-            tp = []
-            tpw = []
-            tpl = []
-            for at in cl.trades()['trades']:
-                profit = float(at['profit_abs'])
-                tp.append(profit)
-                if profit > 0:
-                    tpw.append(profit)
-                else:
-                    tpl.append(abs(profit))
+#             tp = []
+#             tpw = []
+#             tpl = []
+#             for at in cl.trades()['trades']:
+#                 profit = float(at['profit_abs'])
+#                 tp.append(profit)
+#                 if profit > 0:
+#                     tpw.append(profit)
+#                 else:
+#                     tpl.append(abs(profit))
             
-            mean_prof = 0
-            mean_prof_w = 0
-            mean_prof_l = 0
-            median_prof = 0
+#             mean_prof = 0
+#             mean_prof_w = 0
+#             mean_prof_l = 0
+#             median_prof = 0
             
-            if len(tp) > 0:
-                mean_prof = round(statistics.mean(tp), 2)
+#             if len(tp) > 0:
+#                 mean_prof = round(statistics.mean(tp), 2)
             
-            if len(tpw) > 0:
-                mean_prof_w = round(statistics.mean(tpw), 2)
-                median_win = round(statistics.median(tpw), 2)
-            else:
-                mean_prof_w = 0
-                median_win = 0
+#             if len(tpw) > 0:
+#                 mean_prof_w = round(statistics.mean(tpw), 2)
+#                 median_win = round(statistics.median(tpw), 2)
+#             else:
+#                 mean_prof_w = 0
+#                 median_win = 0
             
-            if len(tpl) > 0:
-                mean_prof_l = round(statistics.mean(tpl), 2)
-                median_loss = round(statistics.median(tpl), 2)
-            else:
-                mean_prof_l = 0
-                median_loss = 0
+#             if len(tpl) > 0:
+#                 mean_prof_l = round(statistics.mean(tpl), 2)
+#                 median_loss = round(statistics.median(tpl), 2)
+#             else:
+#                 mean_prof_l = 0
+#                 median_loss = 0
             
-            if (len(tpw) == 0) and (len(tpl) == 0):
-                winrate = 0
-                loserate = 0
-            else:
-                winrate = (len(tpw) / (len(tpw) + len(tpl))) * 100
-                loserate = 100 - winrate
+#             if (len(tpw) == 0) and (len(tpl) == 0):
+#                 winrate = 0
+#                 loserate = 0
+#             else:
+#                 winrate = (len(tpw) / (len(tpw) + len(tpl))) * 100
+#                 loserate = 100 - winrate
             
-            expectancy = 1
-            if mean_prof_w > 0 and mean_prof_l > 0:
-                expectancy = (1 + (mean_prof_w / mean_prof_l)) * (winrate / 100) - 1
-            else:
-                if mean_prof_w == 0:
-                    expectancy = 0
+#             expectancy = 1
+#             if mean_prof_w > 0 and mean_prof_l > 0:
+#                 expectancy = (1 + (mean_prof_w / mean_prof_l)) * (winrate / 100) - 1
+#             else:
+#                 if mean_prof_w == 0:
+#                     expectancy = 0
             
-            expectancy_rate = ((winrate/100) * mean_prof_w) - ((loserate/100) * mean_prof_l)
+#             expectancy_rate = ((winrate/100) * mean_prof_w) - ((loserate/100) * mean_prof_l)
                     
-            t = cl.profit()
+#             t = cl.profit()
 
-            pcc = round(float(t['profit_closed_coin']), 2)
-            all_open_profit = all_open_profit + tot_profit
-            all_profit = all_profit + pcc
-            all_wins = all_wins + t['winning_trades']
-            all_losses = all_losses + t['losing_trades']
+#             pcc = round(float(t['profit_closed_coin']), 2)
+#             all_open_profit = all_open_profit + tot_profit
+#             all_profit = all_profit + pcc
+#             all_wins = all_wins + t['winning_trades']
+#             all_losses = all_losses + t['losing_trades']
 
-            row_data.append((
-                f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}[white]/[magenta]{t['closed_trade_count']}",
-                f"[red]{round(tot_profit, 2)}" if tot_profit <= 0 else f"[green]{round(tot_profit, 2)}",            
-                f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
-                f"[cyan]{round(winrate, 1)}",
-                f"[magenta]{round(expectancy, 2)}",
-                f"[red]{round(expectancy_rate, 2)}" if expectancy_rate <= 0 else f"[green]{round(expectancy_rate, 2)}",
-                # f"[red]{mean_prof}" if mean_prof <= 0 else f"[green]{mean_prof}",
-                f"[green]{median_win}",
-                f"[red]{median_loss}",
-                f"[red]{pcc}" if pcc <= 0 else f"[green]{pcc}",
-            ))
+#             row_data.append((
+#                 f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}[white]/[magenta]{t['closed_trade_count']}",
+#                 f"[red]{round(tot_profit, 2)}" if tot_profit <= 0 else f"[green]{round(tot_profit, 2)}",            
+#                 f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
+#                 f"[cyan]{round(winrate, 1)}",
+#                 f"[magenta]{round(expectancy, 2)}",
+#                 f"[red]{round(expectancy_rate, 2)}" if expectancy_rate <= 0 else f"[green]{round(expectancy_rate, 2)}",
+#                 # f"[red]{mean_prof}" if mean_prof <= 0 else f"[green]{mean_prof}",
+#                 f"[green]{median_win}",
+#                 f"[red]{median_loss}",
+#                 f"[red]{pcc}" if pcc <= 0 else f"[green]{pcc}",
+#             ))
         
-        row_data.append((
-            "",
-            f"[red]{round(all_open_profit, 2)}" if all_open_profit <= 0 else f"[green]{round(all_open_profit, 2)}",
-            f"[green]{all_wins}/[red]{all_losses}",
-            "",
-            "",
-            "",
-            "",
-            "",
-            f"[red]{round(all_profit, 2)}" if all_profit <= 0 else f"[green]{round(all_profit, 2)}",
-        ))
+#         row_data.append((
+#             "",
+#             f"[red]{round(all_open_profit, 2)}" if all_open_profit <= 0 else f"[green]{round(all_open_profit, 2)}",
+#             f"[green]{all_wins}/[red]{all_losses}",
+#             "",
+#             "",
+#             "",
+#             "",
+#             "",
+#             f"[red]{round(all_profit, 2)}" if all_profit <= 0 else f"[green]{round(all_profit, 2)}",
+#         ))
 
-        self.replace_summary_table(container, row_data)
+#         return row_data
 
-    def build_enter_tag_summary(self, container, ftuic) -> Table:
+    def build_enter_tag_summary(self, ftuic) -> Table:
         row_data = [
             ("Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"),
         ]
@@ -381,7 +424,7 @@ class FreqText(App):
         # get dict of bot to trades
         trades_by_tag = {}
 
-        for at in ftuic.rest_client.trades()['trades']:
+        for at in ftuic.get_all_closed_trades():
             if at['enter_tag'] not in trades_by_tag:
                 trades_by_tag[at['enter_tag']] = []
             
@@ -428,24 +471,7 @@ class FreqText(App):
                 f"[red]{t_profit}" if t_profit <= 0 else f"[green]{t_profit}",
             ))
 
-        self.replace_summary_table(container, row_data)
-
-    def build_client_summary(self, container, client_info):    
-        row_data = [
-            ("lane", "swimmer", "country", "time"),
-            # (4, "Joseph Schooling", "Singapore", 50.39),
-            # (2, "Michael Phelps", "United States", 51.14),
-            # (5, "Chad le Clos", "South Africa", 51.14),
-            # (6, "László Cseh", "Hungary", 51.14),
-            # (3, "Li Zhuhao", "China", 51.26),
-            # (8, "Mehdy Metella", "France", 51.58),
-            # (7, "Tom Shields", "United States", 51.73),
-            # (1, "Aleksandr Sadovnikov", "Russia", 51.84),
-            # (10, "Darren Burns", "Scotland", 51.84),
-        ]
-
-        client = client_info[0]
-        self.replace_summary_table(container, row_data)
+        return row_data
 
     def on_mount(self) -> None:
         tree = self.query_one(Tree)
@@ -453,8 +479,7 @@ class FreqText(App):
         tree.root.expand()
         tree.focus()
 
-        self.query_one("#debug-log").write(Text("Hello"))
-        
+        self.query_one("#debug-log").write(Text(f"{datetime.now(tz=timezone.utc)} : FTUI started"))
 
 def setup_client(name=None, config_path=None, url=None, port=None, username=None, password=None):
     if url is None:
