@@ -1,1 +1,4 @@
-textual==0.17.0
+pandas
+numpy
+plotext
+textual>=0.17.0

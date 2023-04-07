@@ -79,8 +79,9 @@ class FTUIClient():
         bot_state = current_config['state']
         runmode = current_config['runmode']
         strategy = current_config['strategy']
+        timeframe = current_config['timeframe']
 
-        print(f"Setting up {self.name} version {c['version']} at {server_url}: {strategy} {bot_state} {runmode}")
+        print(f"Setting up {self.name} version {c['version']} at {server_url}: {strategy} {bot_state} {runmode} {timeframe}")
         sleep(1)
     
     def get_client_config(self):
@@ -94,6 +95,17 @@ class FTUIClient():
         # stake_amount = current_config['stake_amount']
 
         return current_config
+
+    def get_pair_dataframe(self, pair, limit=200) -> pd.DataFrame:
+        cl = self.rest_client
+        candles = cl.pair_candles(pair,
+                                  timeframe=self.get_client_config()['timeframe'],
+                                  limit=limit)
+        cols = candles['columns']
+        data = candles['data']
+        df = pd.DataFrame(data, columns=cols)
+        df.rename(columns = {'open':'Open', 'close':'Close', 'high':'High', 'low':'Low'}, inplace = True)        
+        return df
 
     def get_all_closed_trades(self) -> dict:
         cl = self.rest_client
@@ -145,6 +157,35 @@ class FTUIClient():
                 self.prev_closed_trade_count = len(trades)
 
         return self.all_closed_trades
+
+    def calc_risk(self):
+        cl = self.rest_client
+        bal = cl.balance()
+        avail_bal = 0
+        for b in bal['currencies']:
+            if b['currency'] == self.stake_coin:
+                avail_bal = b['balance']
+                break
+        
+        if self.max_open_trades > 0:
+            max_capit = 0
+            if self.stake_amount != "unlimited":
+                max_capit = float(self.stake_amount * self.max_open_trades)
+            else:
+                max_capit = float(avail_bal / self.max_open_trades)
+
+            if max_capit > 0:
+                risk_per_trade = ((max_capit / self.max_open_trades) / max_capit) * 100
+                return -np.round(avail_bal * risk_per_trade / 100, 2)
+            else:
+                return 0
+        else:
+            return 0
+
+    def get_trade_info(self, trade_id: int):
+        cl = self.rest_client
+        t = cl.trade(trade_id)
+        return t
 
 def main(args):
     if args.get("show"):

@@ -32,6 +32,7 @@ import numpy as np
 from urllib.request import urlopen
 
 from rich.syntax import Syntax
+from rich.table import Table
 from rich.text import Text
 from rich.traceback import Traceback
 
@@ -43,6 +44,10 @@ from textual.widgets import Button, DataTable, Footer, Header, Static, TextLog, 
 from textual.widgets.tree import TreeNode
 
 import rest_client as ftrc
+import ftui_client as ftuic
+
+from ftui_screens import CandlestickScreen, TradeInfoScreen
+import plotext as f
 
 uniqclients = {}
 client_dict = {}
@@ -95,6 +100,18 @@ class FreqText(App):
         bot_id = str(tree.cursor_node.label)
         self.update_tab(active_tab_id, bot_id)        
 
+    def action_show_trade_info_dialog(self, trade_id, cl_name):
+        tis = TradeInfoScreen()
+        tis.trade_id = trade_id
+        tis.client = client_dict[cl_name]
+        self.push_screen(tis)
+
+    def action_show_pair_candlestick_dialog(self, pair, cl_name):
+        css = CandlestickScreen()
+        css.pair = pair
+        css.client = client_dict[cl_name]
+        self.push_screen(css)
+
     def compose(self) -> ComposeResult:
         yield Header()
 
@@ -133,12 +150,12 @@ class FreqText(App):
         highlighter = ReprHighlighter()
 
         def add_node(name: str, node: TreeNode, data: object) -> None:
-            if isinstance(data, dict):
+            if isinstance(data, dict): # client_dict
                 node._label = Text(f"{name}")
-                for cl_name, cl_info in data.items():
+                for cl_name, ftui_client in data.items():
                     new_node = node.add("")
-                    add_node(f"{cl_name}", new_node, cl_info)
-            elif isinstance(data, list):
+                    add_node(f"{cl_name}", new_node, ftui_client)
+            elif isinstance(data, ftuic.FTUIClient): # actual client
                 node._label = Text(f"{name}")
                 node._allow_expand = False
 
@@ -179,6 +196,12 @@ class FreqText(App):
         return "foo"
 
     def replace_summary_table(self, data, tab):
+        # if isinstance(data, Table):
+        #     for c in container.children:
+        #         c.remove()
+        #     data.id = "trade_summary"
+        #     container.mount(data)
+        # else:        
         dt = tab.get_child_by_type(DataTable)
         dt.clear(columns=True)
 
@@ -190,13 +213,39 @@ class FreqText(App):
             raise e
         dt.refresh()
 
-    def build_closed_trade_summary(self, client_info):
+    def build_closed_trade_summary(self, ftuic):
+        row_data = [
+            ("ID", "Pair", "Profit %", "Profit", "Open Date", "Dur.", "Entry", "Exit"),
+        ]
+        fmt = "%Y-%m-%d %H:%M:%S"
+
+        trades = ftuic.get_all_closed_trades()
+        if trades is not None:
+            for t in trades[:20]:
+                otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
+                ctime = datetime.strptime(t['close_date'], fmt).astimezone(tz=timezone.utc)
+                rpfta = round(float(t['profit_abs']), 2)
+
+                row_data.append((
+                    f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
+                    f"[@click=show_pair_candlestick_dialog('{t['pair']}', '{ftuic.name}')]{t['pair']}[/]",
+                    f"[red]{t['profit_pct']}" if t['profit_pct'] <= 0 else f"[green]{t['profit_pct']}",
+                    f"[red]{rpfta}" if rpfta <= 0 else f"[green]{rpfta}",
+                    f"{str(otime).split('+')[0]}",
+                    f"{str(ctime-otime).split('.')[0]}",
+                    f"{t['enter_tag']}",
+                    f"{t['exit_reason']}"
+                ))
+
+        return row_data
+
+    def build_open_trade_summary(self, container, ftuic):
         row_data = [
             ("Pair", "Profit %", "Profit", "Dur.", "Entry", "Exit"),
         ]
         fmt = "%Y-%m-%d %H:%M:%S"
-        client = client_info[0]
-        trades = get_all_closed_trades(client)
+
+        trades = ftuic.get_all_closed_trades()
         if trades is not None:
             for t in trades[:20]:
                 otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
@@ -212,7 +261,174 @@ class FreqText(App):
                     f"{t['exit_reason']}"
                 ))
 
-        return row_data
+        self.replace_summary_table(container, row_data)
+
+    def build_trades_summary(self, container, client_dict):
+        row_data = [
+            ("# Trades", "Open Profit", "W/L", "Winrate", "Exp.",
+             "Exp. Rate", "Med. W", "Med. L", "Total"),
+        ]
+
+        all_open_profit = 0
+        all_profit = 0
+        all_wins = 0
+        all_losses = 0
+        
+        for n, ftuic in client_dict.items():
+            cl = ftuic.rest_client
+
+            tot_profit = 0
+
+            cls = cl.status()
+            if cls is not None:
+                for ot in cl.status():
+                    tot_profit = tot_profit + ot['profit_abs']
+            
+#            max_open_trades = ftuic.max_open_trades
+            #if (max_open_trades > 0):
+                #risk = ftuic.calc_risk()
+            
+            tp = []
+            tpw = []
+            tpl = []
+            for at in cl.trades()['trades']:
+                profit = float(at['profit_abs'])
+                tp.append(profit)
+                if profit > 0:
+                    tpw.append(profit)
+                else:
+                    tpl.append(abs(profit))
+            
+            mean_prof = 0
+            mean_prof_w = 0
+            mean_prof_l = 0
+            median_prof = 0
+            
+            if len(tp) > 0:
+                mean_prof = round(statistics.mean(tp), 2)
+            
+            if len(tpw) > 0:
+                mean_prof_w = round(statistics.mean(tpw), 2)
+                median_win = round(statistics.median(tpw), 2)
+            else:
+                mean_prof_w = 0
+                median_win = 0
+            
+            if len(tpl) > 0:
+                mean_prof_l = round(statistics.mean(tpl), 2)
+                median_loss = round(statistics.median(tpl), 2)
+            else:
+                mean_prof_l = 0
+                median_loss = 0
+            
+            if (len(tpw) == 0) and (len(tpl) == 0):
+                winrate = 0
+                loserate = 0
+            else:
+                winrate = (len(tpw) / (len(tpw) + len(tpl))) * 100
+                loserate = 100 - winrate
+            
+            expectancy = 1
+            if mean_prof_w > 0 and mean_prof_l > 0:
+                expectancy = (1 + (mean_prof_w / mean_prof_l)) * (winrate / 100) - 1
+            else:
+                if mean_prof_w == 0:
+                    expectancy = 0
+            
+            expectancy_rate = ((winrate/100) * mean_prof_w) - ((loserate/100) * mean_prof_l)
+                    
+            t = cl.profit()
+
+            pcc = round(float(t['profit_closed_coin']), 2)
+            all_open_profit = all_open_profit + tot_profit
+            all_profit = all_profit + pcc
+            all_wins = all_wins + t['winning_trades']
+            all_losses = all_losses + t['losing_trades']
+
+            row_data.append((
+                f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}[white]/[magenta]{t['closed_trade_count']}",
+                f"[red]{round(tot_profit, 2)}" if tot_profit <= 0 else f"[green]{round(tot_profit, 2)}",            
+                f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
+                f"[cyan]{round(winrate, 1)}",
+                f"[magenta]{round(expectancy, 2)}",
+                f"[red]{round(expectancy_rate, 2)}" if expectancy_rate <= 0 else f"[green]{round(expectancy_rate, 2)}",
+                # f"[red]{mean_prof}" if mean_prof <= 0 else f"[green]{mean_prof}",
+                f"[green]{median_win}",
+                f"[red]{median_loss}",
+                f"[red]{pcc}" if pcc <= 0 else f"[green]{pcc}",
+            ))
+        
+        row_data.append((
+            "",
+            f"[red]{round(all_open_profit, 2)}" if all_open_profit <= 0 else f"[green]{round(all_open_profit, 2)}",
+            f"[green]{all_wins}/[red]{all_losses}",
+            "",
+            "",
+            "",
+            "",
+            "",
+            f"[red]{round(all_profit, 2)}" if all_profit <= 0 else f"[green]{round(all_profit, 2)}",
+        ))
+
+        self.replace_summary_table(container, row_data)
+
+    def build_enter_tag_summary(self, container, ftuic) -> Table:
+        row_data = [
+            ("Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"),
+        ]
+        fmt = "%Y-%m-%d %H:%M:%S"
+
+        # get dict of bot to trades
+        trades_by_tag = {}
+
+        for at in ftuic.rest_client.trades()['trades']:
+            if at['enter_tag'] not in trades_by_tag:
+                trades_by_tag[at['enter_tag']] = []
+            
+            trades_by_tag[at['enter_tag']].append(at)
+
+        for tag, trades in trades_by_tag.items():
+            t_profit = 0.0
+            
+            tot_trade_dur = 0
+            avg_win_trade_dur = 0
+            avg_loss_trade_dur = 0
+            win_trade_dur = 0
+            num_win = 0
+            loss_trade_dur = 0
+            num_loss = 0
+
+            for t in trades:
+                profit = float(t['profit_abs'])
+                t_profit += profit
+                tdur = (datetime.strptime(t['close_date'], dfmt) - datetime.strptime(t['open_date'], dfmt)).total_seconds()
+                tot_trade_dur = tot_trade_dur + tdur
+                
+                if profit > 0:
+                    win_trade_dur = win_trade_dur + tdur
+                    num_win = num_win + 1
+                else:
+                    loss_trade_dur = loss_trade_dur + tdur
+                    num_loss = num_loss + 1
+
+            t_profit = round(t_profit, 2)
+
+            avg_trade_dur = str(timedelta(seconds = round(tot_trade_dur / len(trades), 0)))
+            if num_win > 0:
+                avg_win_trade_dur = str(timedelta(seconds = round(win_trade_dur / num_win, 0)))
+            if num_loss > 0:
+                avg_loss_trade_dur = str(timedelta(seconds = round(loss_trade_dur / num_loss, 0)))
+
+            row_data.append((
+                f"[white]{tag}",
+                f"[green]{num_win}/[red]{num_loss}",
+                f"[yellow]{avg_trade_dur}",
+                f"[green]{avg_win_trade_dur}",
+                f"[red]{avg_loss_trade_dur}",
+                f"[red]{t_profit}" if t_profit <= 0 else f"[green]{t_profit}",
+            ))
+
+        self.replace_summary_table(container, row_data)
 
     def build_client_summary(self, container, client_info):    
         row_data = [
@@ -298,54 +514,6 @@ class dotdict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-
-def get_all_closed_trades(cl) -> dict:
-    ps = cl.profit()
-    
-    if ps is not None:
-        num_all_closed_trades = int(ps['closed_trade_count'])
-
-        m, r = divmod(int(num_all_closed_trades), 500)
-        trades = []
-
-        if m > 1:
-            ## get last 500
-            cltrades = cl.trades()
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades.extend(clt)
-
-            for i in range(1, m+1):
-                cltrades = cl.trades(offset=(500 * i))
-                if cltrades is not None and 'trades' in cltrades:
-                    clt = cltrades['trades']
-                    if clt is not None and len(clt) > 0:
-                        trades.extend(clt)                        
-
-        elif m == 1:
-            cltrades = cl.trades()
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades.extend(clt)                    
-
-            cltrades = cl.trades(offset=500)
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades.extend(clt)                    
-        else:
-            cltrades = cl.trades()
-            if cltrades is not None and 'trades' in cltrades:
-                clt = cltrades['trades']
-                if clt is not None and len(clt) > 0:
-                    trades = clt
-        
-        trades.reverse()
-    
-    return trades
-
 def setup():
     parser = argparse.ArgumentParser()
     
@@ -407,10 +575,10 @@ def setup():
             for s in args.servers:
                 try:
                     if config is not None:
-                        name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
+                        ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
                     else:
-                        name, client = setup_client(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
-                    client_dict[name] = client
+                        ftui_client = ftuic.FTUIClient(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
+                    client_dict[ftui_client.name] = ftui_client
                 except Exception as e:
                     raise RuntimeError('Cannot create freqtrade client') from e
         else:
@@ -429,18 +597,18 @@ def setup():
 
                     try:
                         if config is not None:
-                            name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
+                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
                         else:
-                            name, client = setup_client(name=botname, url=url, port=port, username=suser, password=spass)
-                        client_dict[name] = client
+                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass)
+                        client_dict[ftui_client.name] = ftui_client
                     except Exception as e:
                         raise RuntimeError("Cannot create freqtrade client") from e
                 else:
                     raise Exception("Cannot parse server option. Please use [name]user:pass@servername:port")
     elif config is not None:
         try:
-            name, client = setup_client(config_path=config)
-            client_dict[name] = client
+            ftui_client = ftuic.FTUIClient(config_path=config)
+            client_dict[ftui_client.name] = ftui_client
         except Exception as e:
             raise RuntimeError('Cannot create freqtrade client') from e
 
