@@ -31,6 +31,11 @@ import numpy as np
 
 from urllib.request import urlopen
 
+from rich.console import Console, Group
+from rich.panel import Panel
+from rich.progress import Progress, BarColumn, TextColumn
+from rich.rule import Rule
+from rich.style import Style
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
@@ -68,7 +73,7 @@ class FreqText(App):
     ]
 
     show_clients = var(True)
-    active_tab = reactive("open-trades-tab")
+    active_tab = reactive("summary-trades-tab")
     
     func_map = {
         "open-trades-tab":"update_open_trades_tab",
@@ -125,13 +130,16 @@ class FreqText(App):
         self.update_tab(active_tab_id, bot_id)
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield Header(show_clock=True)
 
         with Container(id="parent-container"):
             with Container(id="left"):
                 yield Static("[@click='app.bell']Dashboard[/]")
                 yield Tree("Clients", id="client-view")
             with Container(id="right"):
+                with Container(id="trades-summary"):
+                    yield DataTable(id="trades-summary-table", show_cursor=False)
+
                 with TabbedContent(initial="open-trades-tab"):
                     #with TabPane("Summary", id="all-bot-summary-tab")
                     #    yield DataTable(id="all-bot-summary-table")
@@ -142,17 +150,15 @@ class FreqText(App):
                     with TabPane("Closed Trades", id="closed-trades-tab"):
                         yield DataTable(id="closed-trades-table")
                     
-                    with TabPane("Trade Summary", id="summary-trades-tab"):
-                        yield DataTable(id="summary-trades-table")
-
                     with TabPane("Tag Summary", id="tag-summary-tab"):
                         yield DataTable(id="tag-summary-table")
                         
                     with TabPane("Charts", id="charts-tab"):
-                        yield Container(id="chart")   
+                        yield Container(id="chart")
                     
                     with TabPane("Logs", id="logs-tab"):
-                        yield TextLog(id="log")
+                        yield TextLog(id="log", wrap=True)
+                        # yield Container(id="sysinfo-panel")
 
                     # with TabPane("Help", id="help-tab"):
                     #     yield Markdown("#Hello", id="help")
@@ -186,12 +192,24 @@ class FreqText(App):
         bot_id = str(event.node.label)
         
         self.update_tab(active_tab_id, bot_id)
+        self.update_trades_summary(bot_id)
+        # self.update_sysinfo_header(bot_id)
 
     def update_tab(self, tab_id, bot_id):
         if bot_id != "Clients":
             self.active_tab = tab_id
             self.tab_select_func(tab_id, bot_id)
 
+    def update_trades_summary(self, bot_id):
+        cl = client_dict[bot_id]
+        data = self.build_trades_summary(cl)
+        self.replace_trades_summary_header(data)
+
+    # def update_sysinfo_header(self, bot_id):
+    #     cl = client_dict[bot_id]        
+    #     data = self.build_sysinfo_header(cl)
+    #     self.replace_sysinfo_header(data)
+        
     def update_open_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
         tab = self._get_tab(tab_id)
@@ -203,11 +221,6 @@ class FreqText(App):
         tab = self._get_tab(tab_id)
         data = self.build_closed_trade_summary(cl) 
         self.replace_summary_table(data, tab)
-
-    def update_summary_trades_tab(self, tab_id, bot_id):
-        cl = client_dict[bot_id]
-        tab = self._get_tab(tab_id)
-        return "foo"
 
     def update_tag_summary_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
@@ -231,13 +244,26 @@ class FreqText(App):
     #     cl = client_dict[bot_id]
     #     return "foo"
 
-    def replace_summary_table(self, data, tab):
-        # if isinstance(data, Table):
-        #     for c in container.children:
-        #         c.remove()
-        #     data.id = "trade_summary"
-        #     container.mount(data)
-        # else:        
+    def replace_trades_summary_header(self, data):
+        dt = self.query_one("#trades-summary-table")
+        dt.clear(columns=True)
+
+        rows = iter(data)
+        try:
+            dt.add_columns(*next(rows))
+            dt.add_rows(rows)
+        except Exception as e:
+            raise e
+        dt.refresh()
+
+    # def replace_sysinfo_header(self, data):
+    #     panel = self.query_one("#sysinfo-panel")
+    #     for c in panel.children:
+    #         c.remove()
+    #     sysinfo_group = Group(*data)
+    #     panel.mount(sysinfo_group)
+
+    def replace_summary_table(self, data, tab):        
         dt = tab.get_child_by_type(DataTable)
         dt.clear(columns=True)
 
@@ -255,29 +281,147 @@ class FreqText(App):
             c.remove()
         chart_container.mount(chart)
 
-    def build_closed_trade_summary(self, ftuic):
+    def build_sysinfo_header(self, ftuic):
+        sysinfo = ftuic.get_sys_info()
+        syslist = []
+        
+        progress_table = Table.grid(expand=True, pad_edge=True)
+        
+        progress_cpu = Progress(
+            "{task.description}",
+            BarColumn(bar_width=None, complete_style=Style(color="red"), finished_style=Style(color="red")),
+            TextColumn("[red]{task.percentage:>3.0f}%"),
+            expand=True,
+        )
+        
+        progress_ram = Progress(
+            "{task.description}",
+            BarColumn(bar_width=None, complete_style=Style(color="magenta"), finished_style=Style(color="magenta")),
+            TextColumn("[magenta]{task.percentage:>3.0f}%", style=Style(color="magenta")),
+            expand=True,
+        )
+        
+        progress_table.add_row(
+            progress_cpu,
+            progress_ram
+        )
+        
+        if 'cpu_pct' in sysinfo:
+            for cpux in sysinfo['cpu_pct']:
+                cpujob = progress_cpu.add_task("[cyan] CPU")
+                progress_cpu.update(cpujob, completed=cpux)
+
+            job2 = progress_ram.add_task("[cyan] RAM")
+            progress_ram.update(job2, completed=sysinfo['ram_pct'])
+
+            syslist.append(Rule(title=f"{ftuic.name} [{ftuic.url}:{ftuic.port}]", style=Style(color="cyan"), align="left"))
+            syslist.append(progress_table)
+
+        return syslist
+
+    def build_trades_summary(self, ftuic):
         row_data = [
-            ("ID", "Pair", "Profit %", "Profit", "Open Date", "Dur.", "Entry", "Exit"),
+            ("# Trades", "Open Profit", "W/L", "Winrate", "Exp.",
+             "Exp. Rate", "Med. W", "Med. L", "Total"),
         ]
-        fmt = "%Y-%m-%d %H:%M:%S"
 
-        trades = ftuic.get_all_closed_trades()
-        if trades is not None:
-            for t in trades[:20]:
-                otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
-                ctime = datetime.strptime(t['close_date'], fmt).astimezone(tz=timezone.utc)
-                rpfta = round(float(t['profit_abs']), 2)
+        all_open_profit = 0
+        all_profit = 0
+        all_wins = 0
+        all_losses = 0
+        
+        tot_profit = 0
 
-                row_data.append((
-                    f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
-                    f"[@click=show_pair_candlestick_dialog('{t['pair']}', '{ftuic.name}')]{t['pair']}[/]",
-                    f"[red]{t['profit_pct']}" if t['profit_pct'] <= 0 else f"[green]{t['profit_pct']}",
-                    f"[red]{rpfta}" if rpfta <= 0 else f"[green]{rpfta}",
-                    f"{str(otime).split('+')[0]}",
-                    f"{str(ctime-otime).split('.')[0]}",
-                    f"{t['enter_tag']}",
-                    f"{t['exit_reason']}"
-                ))
+        status = ftuic.get_open_trades()
+        if status is not None:
+            for ot in status:
+                tot_profit = tot_profit + ot['profit_abs']
+        
+#            max_open_trades = ftuic.max_open_trades
+        #if (max_open_trades > 0):
+            #risk = ftuic.calc_risk()
+        
+        tp = []
+        tpw = []
+        tpl = []
+        for at in ftuic.get_all_closed_trades():
+            profit = float(at['profit_abs'])
+            tp.append(profit)
+            if profit > 0:
+                tpw.append(profit)
+            else:
+                tpl.append(abs(profit))
+        
+        mean_prof = 0
+        mean_prof_w = 0
+        mean_prof_l = 0
+        median_prof = 0
+        
+        if len(tp) > 0:
+            mean_prof = round(statistics.mean(tp), 2)
+        
+        if len(tpw) > 0:
+            mean_prof_w = round(statistics.mean(tpw), 2)
+            median_win = round(statistics.median(tpw), 2)
+        else:
+            mean_prof_w = 0
+            median_win = 0
+        
+        if len(tpl) > 0:
+            mean_prof_l = round(statistics.mean(tpl), 2)
+            median_loss = round(statistics.median(tpl), 2)
+        else:
+            mean_prof_l = 0
+            median_loss = 0
+        
+        if (len(tpw) == 0) and (len(tpl) == 0):
+            winrate = 0
+            loserate = 0
+        else:
+            winrate = (len(tpw) / (len(tpw) + len(tpl))) * 100
+            loserate = 100 - winrate
+        
+        expectancy = 1
+        if mean_prof_w > 0 and mean_prof_l > 0:
+            expectancy = (1 + (mean_prof_w / mean_prof_l)) * (winrate / 100) - 1
+        else:
+            if mean_prof_w == 0:
+                expectancy = 0
+        
+        expectancy_rate = ((winrate/100) * mean_prof_w) - ((loserate/100) * mean_prof_l)
+                
+        t = ftuic.get_total_profit()
+
+        pcc = round(float(t['profit_closed_coin']), 2)
+        all_open_profit = all_open_profit + tot_profit
+        all_profit = all_profit + pcc
+        all_wins = all_wins + t['winning_trades']
+        all_losses = all_losses + t['losing_trades']
+
+        row_data.append((
+            f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}[white]/[magenta]{t['closed_trade_count']}",
+            f"[red]{round(tot_profit, 2)}" if tot_profit <= 0 else f"[green]{round(tot_profit, 2)}",            
+            f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
+            f"[cyan]{round(winrate, 1)}",
+            f"[magenta]{round(expectancy, 2)}",
+            f"[red]{round(expectancy_rate, 2)}" if expectancy_rate <= 0 else f"[green]{round(expectancy_rate, 2)}",
+            # f"[red]{mean_prof}" if mean_prof <= 0 else f"[green]{mean_prof}",
+            f"[green]{median_win}",
+            f"[red]{median_loss}",
+            f"[red]{pcc}" if pcc <= 0 else f"[green]{pcc}",
+        ))
+        
+        # row_data.append((
+        #     "",
+        #     f"[red]{round(all_open_profit, 2)}" if all_open_profit <= 0 else f"[green]{round(all_open_profit, 2)}",
+        #     f"[green]{all_wins}/[red]{all_losses}",
+        #     "",
+        #     "",
+        #     "",
+        #     "",
+        #     "",
+        #     f"[red]{round(all_profit, 2)}" if all_profit <= 0 else f"[green]{round(all_profit, 2)}",
+        # ))
 
         return row_data
 
@@ -309,122 +453,39 @@ class FreqText(App):
 
         return row_data
 
+    def build_closed_trade_summary(self, ftuic):
+        row_data = [
+            ("ID", "Pair", "Profit %", "Profit", "Open Date", "Dur.", "Entry", "Exit"),
+        ]
+        fmt = "%Y-%m-%d %H:%M:%S"
+
+        trades = ftuic.get_all_closed_trades()
+        if trades is not None:
+            for t in trades[:20]:
+                otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
+                ctime = datetime.strptime(t['close_date'], fmt).astimezone(tz=timezone.utc)
+                rpfta = round(float(t['profit_abs']), 2)
+
+                row_data.append((
+                    f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
+                    f"[@click=show_pair_candlestick_dialog('{t['pair']}', '{ftuic.name}')]{t['pair']}[/]",
+                    f"[red]{t['profit_pct']}" if t['profit_pct'] <= 0 else f"[green]{t['profit_pct']}",
+                    f"[red]{rpfta}" if rpfta <= 0 else f"[green]{rpfta}",
+                    f"{str(otime).split('+')[0]}",
+                    f"{str(ctime-otime).split('.')[0]}",
+                    f"{t['enter_tag']}",
+                    f"{t['exit_reason']}"
+                ))
+
+        return row_data
+
     def build_profit_chart(self, ftuic):
         pc = ProfitChartPanel()
         pc.client = ftuic
         pc.title = ftuic.name
         return pc
 
-#     def build_trades_summary(self, ftuic):
-#         row_data = [
-#             ("# Trades", "Open Profit", "W/L", "Winrate", "Exp.",
-#              "Exp. Rate", "Med. W", "Med. L", "Total"),
-#         ]
-
-#         all_open_profit = 0
-#         all_profit = 0
-#         all_wins = 0
-#         all_losses = 0
-        
-#         for n, ftuic in ftuic.items():
-#             cl = ftuic.rest_client
-
-#             tot_profit = 0
-
-#             cls = cl.status()
-#             if cls is not None:
-#                 for ot in cl.status():
-#                     tot_profit = tot_profit + ot['profit_abs']
-            
-# #            max_open_trades = ftuic.max_open_trades
-#             #if (max_open_trades > 0):
-#                 #risk = ftuic.calc_risk()
-            
-#             tp = []
-#             tpw = []
-#             tpl = []
-#             for at in cl.trades()['trades']:
-#                 profit = float(at['profit_abs'])
-#                 tp.append(profit)
-#                 if profit > 0:
-#                     tpw.append(profit)
-#                 else:
-#                     tpl.append(abs(profit))
-            
-#             mean_prof = 0
-#             mean_prof_w = 0
-#             mean_prof_l = 0
-#             median_prof = 0
-            
-#             if len(tp) > 0:
-#                 mean_prof = round(statistics.mean(tp), 2)
-            
-#             if len(tpw) > 0:
-#                 mean_prof_w = round(statistics.mean(tpw), 2)
-#                 median_win = round(statistics.median(tpw), 2)
-#             else:
-#                 mean_prof_w = 0
-#                 median_win = 0
-            
-#             if len(tpl) > 0:
-#                 mean_prof_l = round(statistics.mean(tpl), 2)
-#                 median_loss = round(statistics.median(tpl), 2)
-#             else:
-#                 mean_prof_l = 0
-#                 median_loss = 0
-            
-#             if (len(tpw) == 0) and (len(tpl) == 0):
-#                 winrate = 0
-#                 loserate = 0
-#             else:
-#                 winrate = (len(tpw) / (len(tpw) + len(tpl))) * 100
-#                 loserate = 100 - winrate
-            
-#             expectancy = 1
-#             if mean_prof_w > 0 and mean_prof_l > 0:
-#                 expectancy = (1 + (mean_prof_w / mean_prof_l)) * (winrate / 100) - 1
-#             else:
-#                 if mean_prof_w == 0:
-#                     expectancy = 0
-            
-#             expectancy_rate = ((winrate/100) * mean_prof_w) - ((loserate/100) * mean_prof_l)
-                    
-#             t = cl.profit()
-
-#             pcc = round(float(t['profit_closed_coin']), 2)
-#             all_open_profit = all_open_profit + tot_profit
-#             all_profit = all_profit + pcc
-#             all_wins = all_wins + t['winning_trades']
-#             all_losses = all_losses + t['losing_trades']
-
-#             row_data.append((
-#                 f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}[white]/[magenta]{t['closed_trade_count']}",
-#                 f"[red]{round(tot_profit, 2)}" if tot_profit <= 0 else f"[green]{round(tot_profit, 2)}",            
-#                 f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
-#                 f"[cyan]{round(winrate, 1)}",
-#                 f"[magenta]{round(expectancy, 2)}",
-#                 f"[red]{round(expectancy_rate, 2)}" if expectancy_rate <= 0 else f"[green]{round(expectancy_rate, 2)}",
-#                 # f"[red]{mean_prof}" if mean_prof <= 0 else f"[green]{mean_prof}",
-#                 f"[green]{median_win}",
-#                 f"[red]{median_loss}",
-#                 f"[red]{pcc}" if pcc <= 0 else f"[green]{pcc}",
-#             ))
-        
-#         row_data.append((
-#             "",
-#             f"[red]{round(all_open_profit, 2)}" if all_open_profit <= 0 else f"[green]{round(all_open_profit, 2)}",
-#             f"[green]{all_wins}/[red]{all_losses}",
-#             "",
-#             "",
-#             "",
-#             "",
-#             "",
-#             f"[red]{round(all_profit, 2)}" if all_profit <= 0 else f"[green]{round(all_profit, 2)}",
-#         ))
-
-#         return row_data
-
-    def build_enter_tag_summary(self, ftuic) -> Table:
+    def build_enter_tag_summary(self, ftuic):
         row_data = [
             ("Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"),
         ]

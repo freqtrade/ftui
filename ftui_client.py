@@ -16,6 +16,8 @@ import numpy as np
 
 from urllib.request import urlopen
 
+from rich.table import Table
+
 import rest_client as ftrc
 
 logging.basicConfig(
@@ -167,6 +169,11 @@ class FTUIClient():
             return ts
         return trades
 
+    def get_total_profit(self) -> dict:
+        cl = self.rest_client
+        profit = cl.profit()
+        return profit
+
     def get_logs(self) -> str:
         cl = self.rest_client
         logjson = cl.logs(limit=100)
@@ -180,6 +187,11 @@ class FTUIClient():
                 logstr += f"{logline[0]} - {logline[2]} - {logline[3]} - {logline[4]}\n"
             
         return logstr
+
+    def get_sys_info(self) -> list:
+        cl = self.rest_client
+        si = cl.sysinfo()
+        return si
 
     def calc_risk(self):
         cl = self.rest_client

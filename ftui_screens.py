@@ -49,7 +49,7 @@ class ProfitChartPanel(Container):
             plt.date_form(dfmt)
             plt.plot(self.profit_series)
             # plt.plotsize(self.parent.size.width * 0.9, self.parent.size.height * 0.55)
-            plt.plotsize(width, height * 0.85)
+            plt.plotsize(width * 0.99, height * 0.89)
 
             plt.title(title)
             plt.ylabel("Profit")

@@ -2,13 +2,21 @@ Screen {
     background: $surface-darken-1;
 }
 
+#trades-summary {
+    height: 4;
+    width: 100%;
+    margin-left: 2;
+    margin-right: 4;
+    border-bottom: white;
+}
+
 TabbedContent {
     height: 1fr;
     /* border: blue; */
 }
 
 ContentSwitcher {
-    /* border: red; */
+    /* border-bottom: white; */
     height: 1fr;
 }
 
@@ -131,7 +139,7 @@ FreqText.-show-clients #left {
 }
 
 #dt-dialog {
-    height: 100%;
+    height: 1fr;
     width: 100%;
     margin: 4 8;
     background: $panel 50%;
