@@ -16,7 +16,13 @@ TabPane {
     layout: vertical;    
     /* border: mediumvioletred; */
     width:100%;
-    height: 1fr
+    height: 1fr;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+TabPane > DataTable {
+    height: 1fr;
 }
 
 #debug-log {

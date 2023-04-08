@@ -39,7 +39,7 @@ from rich.traceback import Traceback
 from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
-from textual.reactive import var
+from textual.reactive import reactive, var
 from textual.widgets import Button, DataTable, Footer, Header, Static, TextLog, Tree, Markdown, TabbedContent, TabPane
 from textual.widgets.tree import TreeNode
 
@@ -68,7 +68,8 @@ class FreqText(App):
     ]
 
     show_clients = var(True)
-
+    active_tab = reactive("open-trades-tab")
+    
     func_map = {
         "open-trades-tab":"update_open_trades_tab",
         "closed-trades-tab":"update_closed_trades_tab",
@@ -117,12 +118,18 @@ class FreqText(App):
         css.client = client_dict[cl_name]
         self.push_screen(css)
 
+    def monitor_active_tab(self, active_tab_id):
+        self.debug(f"Active tab changed: {active_tab_id}")
+        tree = self.query_one(Tree)
+        bot_id = str(tree.cursor_node.label)
+        self.update_tab(active_tab_id, bot_id)
+
     def compose(self) -> ComposeResult:
         yield Header()
 
         with Container(id="parent-container"):
             with Container(id="left"):
-                yield Static("Dashboard")
+                yield Static("[@click='app.bell']Dashboard[/]")
                 yield Tree("Clients", id="client-view")
             with Container(id="right"):
                 with TabbedContent(initial="open-trades-tab"):
@@ -181,7 +188,9 @@ class FreqText(App):
         self.update_tab(active_tab_id, bot_id)
 
     def update_tab(self, tab_id, bot_id):
-        self.tab_select_func(tab_id, bot_id)
+        if bot_id != "Clients":
+            self.active_tab = tab_id
+            self.tab_select_func(tab_id, bot_id)
 
     def update_open_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
@@ -480,6 +489,8 @@ class FreqText(App):
         tree.focus()
 
         self.query_one("#debug-log").write(Text(f"{datetime.now(tz=timezone.utc)} : FTUI started"))
+        
+        self.watch(self.query_one("#right").get_child_by_type(TabbedContent), "active", self.monitor_active_tab)
 
 def setup_client(name=None, config_path=None, url=None, port=None, username=None, password=None):
     if url is None:
