@@ -73,7 +73,10 @@ class FreqText(App):
     ]
 
     show_clients = var(True)
-    active_tab = reactive("summary-trades-tab")
+    active_tab = reactive("open-trades-tab")
+    updating = False
+    
+    loglimit = 100
     
     func_map = {
         "open-trades-tab":"update_open_trades_tab",
@@ -89,45 +92,22 @@ class FreqText(App):
         debuglog = self.query_one("#debug-log")
         debuglog.write(msg)
         
-    def tab_select_func(self, tab_id, bot_id):
+    async def tab_select_func(self, tab_id, bot_id):
         self.debug(f"Attempting select {tab_id} {bot_id}")
         if tab_id in self.func_map:
             getattr(self, self.func_map[tab_id])(tab_id, bot_id)
 
+    def _get_active_tab_id(self):
+        active_tab_id = self.query_one("#right").get_child_by_type(TabbedContent).active
+        return active_tab_id
+
     def _get_tab(self, tab_id):
         return next(self.query(f"#{tab_id}").results(TabPane))
 
-    def watch_show_clients(self, show_clients: bool) -> None:
-        self.set_class(show_clients, "-show-clients")
-
-    def action_toggle_clients(self) -> None:
-        self.show_clients = (
-            not self.show_clients
-        )
-
-    def action_show_tab(self, tab: str) -> None:
-        self.get_child_by_type(TabbedContent).active = tab
+    def _get_bot_id_from_tree(self):
         tree = self.query_one(Tree)
         bot_id = str(tree.cursor_node.label)
-        self.update_tab(active_tab_id, bot_id)        
-
-    def action_show_trade_info_dialog(self, trade_id, cl_name):
-        tis = TradeInfoScreen()
-        tis.trade_id = trade_id
-        tis.client = client_dict[cl_name]
-        self.push_screen(tis)
-
-    def action_show_pair_candlestick_dialog(self, pair, cl_name):
-        css = CandlestickScreen()
-        css.pair = pair
-        css.client = client_dict[cl_name]
-        self.push_screen(css)
-
-    def monitor_active_tab(self, active_tab_id):
-        self.debug(f"Active tab changed: {active_tab_id}")
-        tree = self.query_one(Tree)
-        bot_id = str(tree.cursor_node.label)
-        self.update_tab(active_tab_id, bot_id)
+        return bot_id
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -185,25 +165,96 @@ class FreqText(App):
 
         add_node("Clients", node, clients)
 
+    def on_mount(self) -> None:
+        tree = self.query_one(Tree)
+        self.add_clients(tree.root, client_dict)
+        tree.root.expand()
+        tree.focus()
+
+        self.query_one("#debug-log").write(Text(f"{datetime.now(tz=timezone.utc)} : FTUI started"))
+        
+        self.watch(self.query_one("#right").get_child_by_type(TabbedContent), "active", self.monitor_active_tab)
+        
+        self.update_one_sec_render = self.set_interval(
+            1, self.update_per_sec
+        )
+
+        self.update_five_sec_render = self.set_interval(
+            5, self.update_per_five_sec
+        )
+
+    async def update_per_sec(self):
+        active_tab_id = self._get_active_tab_id()
+        bot_id = self._get_bot_id_from_tree()
+        
+        if bot_id is not None and (bot_id != "Clients"):
+            self.updating = True
+            
+            if ("open-trades-tab" == active_tab_id):
+                self.update_open_trades_tab(active_tab_id, bot_id)
+            
+            self.update_trades_summary(bot_id)
+        
+        self.updating = False
+        
+    async def update_per_five_sec(self):
+        active_tab_id = self._get_active_tab_id()
+        bot_id = self._get_bot_id_from_tree()
+        
+        if bot_id is not None:
+            if ("logs-tab" == active_tab_id):
+                self.update_logs_tab(active_tab_id, bot_id)
+
+    def watch_show_clients(self, show_clients: bool) -> None:
+        self.set_class(show_clients, "-show-clients")
+
+    def action_toggle_clients(self) -> None:
+        self.show_clients = (
+            not self.show_clients
+        )
+
+    def action_show_tab(self, tab: str) -> None:
+        self.get_child_by_type(TabbedContent).active = tab
+        bot_id = self._get_bot_id_from_tree()
+        self.update_tab(active_tab_id, bot_id)
+
+    def action_show_trade_info_dialog(self, trade_id, cl_name):
+        tis = TradeInfoScreen()
+        tis.trade_id = trade_id
+        tis.client = client_dict[cl_name]
+        self.push_screen(tis)
+
+    def action_show_pair_candlestick_dialog(self, pair, cl_name):
+        css = CandlestickScreen()
+        css.pair = pair
+        css.client = client_dict[cl_name]
+        self.push_screen(css)
+
+    def monitor_active_tab(self, active_tab_id):
+        bot_id = self._get_bot_id_from_tree()
+        self.debug(f"Active tab changed: {active_tab_id}")
+        self.update_tab(active_tab_id, bot_id)
+
     def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
         event.stop()
 
-        active_tab_id = self.query_one("#right").get_child_by_type(TabbedContent).active
+        active_tab_id = self._get_active_tab_id()
         bot_id = str(event.node.label)
         
         self.update_tab(active_tab_id, bot_id)
         self.update_trades_summary(bot_id)
+        
         # self.update_sysinfo_header(bot_id)
 
     def update_tab(self, tab_id, bot_id):
         if bot_id != "Clients":
             self.active_tab = tab_id
-            self.tab_select_func(tab_id, bot_id)
+            self.run_worker(self.tab_select_func(tab_id, bot_id), exclusive=True)
 
     def update_trades_summary(self, bot_id):
         cl = client_dict[bot_id]
         data = self.build_trades_summary(cl)
-        self.replace_trades_summary_header(data)
+        return self.replace_trades_summary_header(data)
 
     # def update_sysinfo_header(self, bot_id):
     #     cl = client_dict[bot_id]        
@@ -213,8 +264,8 @@ class FreqText(App):
     def update_open_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
         tab = self._get_tab(tab_id)
-        data = self.build_open_trade_summary(cl) 
-        self.replace_summary_table(data, tab)
+        data = self.build_open_trade_summary(cl)
+        return self.replace_summary_table(data, tab)
 
     def update_closed_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
@@ -237,8 +288,8 @@ class FreqText(App):
     def update_logs_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
         tab = self._get_tab(tab_id)
-        logs = cl.get_logs()
-        tab.query_one("#log").write(logs)
+        logs = cl.get_logs(limit=self.loglimit)
+        self.replace_logs(logs, tab)
 
     # def update_help_tab(self, tab_id, bot_id):
     #     cl = client_dict[bot_id]
@@ -280,6 +331,11 @@ class FreqText(App):
         for c in chart_container.children:
             c.remove()
         chart_container.mount(chart)
+
+    def replace_logs(self, logs, tab):
+        log = tab.query_one("#log")
+        log.clear()
+        log.write(logs)
 
     def build_sysinfo_header(self, ftuic):
         sysinfo = ftuic.get_sys_info()
@@ -542,16 +598,6 @@ class FreqText(App):
             ))
 
         return row_data
-
-    def on_mount(self) -> None:
-        tree = self.query_one(Tree)
-        self.add_clients(tree.root, client_dict)
-        tree.root.expand()
-        tree.focus()
-
-        self.query_one("#debug-log").write(Text(f"{datetime.now(tz=timezone.utc)} : FTUI started"))
-        
-        self.watch(self.query_one("#right").get_child_by_type(TabbedContent), "active", self.monitor_active_tab)
 
 def setup_client(name=None, config_path=None, url=None, port=None, username=None, password=None):
     if url is None:

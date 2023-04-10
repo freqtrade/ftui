@@ -174,9 +174,13 @@ class FTUIClient():
         profit = cl.profit()
         return profit
 
-    def get_logs(self) -> str:
+    def get_logs(self, limit=None) -> str:
         cl = self.rest_client
-        logjson = cl.logs(limit=100)
+        
+        if limit is not None:
+            logjson = cl.logs(limit=limit)
+        else:
+            logjson = cl.logs()
         
         logstr = ""
         
