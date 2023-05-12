@@ -17,7 +17,7 @@ Run with:
 
 """
 
-import sys
+import asyncio, sys
 from time import sleep
 
 import json, random, sys, os, re, argparse, traceback, statistics
@@ -41,7 +41,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.traceback import Traceback
 
-from textual import events
+from textual import events, work
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive, var
@@ -75,6 +75,7 @@ class FreqText(App):
     show_clients = var(True)
     active_tab = reactive("open-trades-tab")
     updating = False
+    last_update = None
     
     loglimit = 100
     
@@ -92,7 +93,7 @@ class FreqText(App):
         debuglog = self.query_one("#debug-log")
         debuglog.write(msg)
         
-    async def tab_select_func(self, tab_id, bot_id):
+    def tab_select_func(self, tab_id, bot_id):
         self.debug(f"Attempting select {tab_id} {bot_id}")
         if tab_id in self.func_map:
             getattr(self, self.func_map[tab_id])(tab_id, bot_id)
@@ -118,9 +119,11 @@ class FreqText(App):
                 yield Tree("Clients", id="client-view")
             with Container(id="right"):
                 with Container(id="trades-summary"):
+                    yield Static("Select a bot from the client list...", id="sel-bot-title")
                     yield DataTable(id="trades-summary-table", show_cursor=False)
 
                 with TabbedContent(initial="open-trades-tab"):
+                    
                     #with TabPane("Summary", id="all-bot-summary-tab")
                     #    yield DataTable(id="all-bot-summary-table")
 
@@ -190,10 +193,10 @@ class FreqText(App):
         if bot_id is not None and (bot_id != "Clients"):
             self.updating = True
             
+            self.update_trades_summary(bot_id)
+            
             if ("open-trades-tab" == active_tab_id):
                 self.update_open_trades_tab(active_tab_id, bot_id)
-            
-            self.update_trades_summary(bot_id)
         
         self.updating = False
         
@@ -207,6 +210,9 @@ class FreqText(App):
 
     def watch_show_clients(self, show_clients: bool) -> None:
         self.set_class(show_clients, "-show-clients")
+
+    #def watch_active_tab(self, active_tab: str) -> None:
+    #    self.query_one("#sel-bot-title").update(active_tab)
 
     def action_toggle_clients(self) -> None:
         self.show_clients = (
@@ -241,20 +247,22 @@ class FreqText(App):
         active_tab_id = self._get_active_tab_id()
         bot_id = str(event.node.label)
         
-        self.update_tab(active_tab_id, bot_id)
+        self.query_one("#sel-bot-title").update(bot_id)
         self.update_trades_summary(bot_id)
-        
+        self.update_tab(active_tab_id, bot_id)
         # self.update_sysinfo_header(bot_id)
-
+    
+    # @work(exclusive=True)
     def update_tab(self, tab_id, bot_id):
         if bot_id != "Clients":
             self.active_tab = tab_id
-            self.run_worker(self.tab_select_func(tab_id, bot_id), exclusive=True)
+            # self.run_worker(self.tab_select_func(tab_id, bot_id), exclusive=True)
+            self.tab_select_func(tab_id, bot_id)
 
     def update_trades_summary(self, bot_id):
         cl = client_dict[bot_id]
         data = self.build_trades_summary(cl)
-        return self.replace_trades_summary_header(data)
+        self.replace_trades_summary_header(data)
 
     # def update_sysinfo_header(self, bot_id):
     #     cl = client_dict[bot_id]        
@@ -265,7 +273,7 @@ class FreqText(App):
         cl = client_dict[bot_id]
         tab = self._get_tab(tab_id)
         data = self.build_open_trade_summary(cl)
-        return self.replace_summary_table(data, tab)
+        self.replace_summary_table(data, tab)
 
     def update_closed_trades_tab(self, tab_id, bot_id):
         cl = client_dict[bot_id]
@@ -314,7 +322,7 @@ class FreqText(App):
     #     sysinfo_group = Group(*data)
     #     panel.mount(sysinfo_group)
 
-    def replace_summary_table(self, data, tab):        
+    def replace_summary_table(self, data, tab):
         dt = tab.get_child_by_type(DataTable)
         dt.clear(columns=True)
 
@@ -325,6 +333,8 @@ class FreqText(App):
         except Exception as e:
             raise e
         dt.refresh()
+        
+        return dt
 
     def replace_chart(self, chart, tab):
         chart_container = tab.get_child_by_type(Container)
