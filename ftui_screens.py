@@ -1,24 +1,23 @@
+from time import sleep
+
 from rich.text import Text
 from rich.jupyter import JupyterMixin
 
-from textual import events
+from textual import events, work
 from textual.app import App, ComposeResult
 from textual.containers import Container, Grid, Horizontal, Vertical
-from textual.screen import Screen
+from textual.screen import Screen, ModalScreen
 
 from textual.reactive import var, reactive
 from textual.widgets import Button, DataTable, Footer, Header, Static
 
 import pandas as pd
-import gnuplotlib as gp
-import termplotlib as tpl
 import numpy as np
 import subprocess
 
 from rich.ansi import AnsiDecoder
 from rich.console import Group
 import plotext as plt
-import yfinance as yf
 
 import ftui_client as ftuic
 
@@ -77,7 +76,7 @@ class ProfitChartPanel(Container):
         return profitseries
             
 
-class BasicModal(Screen):
+class BasicModal(ModalScreen[int]):
     BINDINGS = [
         ("escape", "close_dialog", "Close Dialog"),
     ]    
@@ -87,9 +86,13 @@ class BasicModal(Screen):
     def action_close_dialog(self) -> None:
         self.app.pop_screen()
 
+
 class CandlestickScreen(BasicModal):
     pair: str = "BTC/USDT"
     limit: int = 200
+    
+    candles = reactive(pd.DataFrame(), always_update=True, init=False)
+    plot = None
 
     class plotextMixin(JupyterMixin):
 
@@ -99,14 +102,16 @@ class CandlestickScreen(BasicModal):
             self.height = height
             self.title = title
             self.candles = candles
+            self.rich_canvas = "Loading chart..."
 
         def __rich_console__(self, console, options):
             self.width = options.max_width or console.width
             self.height = options.height or console.height
             
-            canvas = self.build_candlestick_plot_screen(self.width, self.height, self.title)
+            if self.candles.shape[0] > 0:
+                canvas = self.build_candlestick_plot_screen(self.width, self.height, self.title)
+                self.rich_canvas = Group(*self.decoder.decode(canvas))
             
-            self.rich_canvas = Group(*self.decoder.decode(canvas))
             yield self.rich_canvas
 
         def build_candlestick_plot_screen(self, width, height, title):
@@ -142,17 +147,26 @@ class CandlestickScreen(BasicModal):
             return plt.build()
 
     def compose(self) -> ComposeResult:
-        candles = self.get_candles()
-        plot = self.plotextMixin(width=self.parent.size.width, height=self.parent.size.height, title = self.pair, candles = candles)
-        main = Static(plot)
+        main = Static("Loading chart...")
         yield Container(
             main,
             id="dt-dialog",
         )
         yield Footer()
 
-    def get_candles(self):
-        return self.client.get_pair_dataframe(self.pair, limit=self.limit)
+    def on_mount(self) -> None:
+        self.update_candles()
+
+    def do_refresh(self):
+        dtd = self.query_one('#dt_dialog')
+        dtd.update("Done")
+
+    @work(exclusive=True)
+    def update_candles(self):
+        #candles = self.client.get_pair_dataframe(self.pair, limit=self.limit)
+        #self.plot = self.plotextMixin(width=self.parent.size.width, height=self.parent.size.height, title = self.pair, candles = candles)
+        # self.post_message(self.Change(item=self.item))
+        sleep(1)
 
 class DataFrameScreen(BasicModal):
     pair: str = "BTC/USDT"

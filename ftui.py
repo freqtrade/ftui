@@ -41,11 +41,11 @@ from rich.table import Table
 from rich.text import Text
 from rich.traceback import Traceback
 
-from textual import events, work
+from textual import events, work, on
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive, var
-from textual.widgets import Button, DataTable, Footer, Header, Static, TextLog, Tree, Markdown, TabbedContent, TabPane
+from textual.widgets import Button, DataTable, Footer, Header, Static, Select, TextLog, Tree, Markdown, TabbedContent, TabPane
 from textual.widgets.tree import TreeNode
 
 import rest_client as ftrc
@@ -56,6 +56,9 @@ import plotext as f
 
 uniqclients = {}
 client_dict = {}
+
+db_option = ("Dashboard", "dashboard")
+client_select_options = [db_option]
 
 urlre = "^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
 dfmt = "%Y-%m-%d %H:%M:%S"
@@ -71,6 +74,10 @@ class FreqText(App):
         ("c", "toggle_clients", "Toggle Client Browser"),
         ("q", "quit", "Quit"),
     ]
+
+    SCREENS = {"c_candles": CandlestickScreen(),
+               "i_tradeinfo": TradeInfoScreen(),
+               "c_profit": ProfitChartPanel()}
 
     show_clients = var(True)
     active_tab = reactive("open-trades-tab")
@@ -99,24 +106,42 @@ class FreqText(App):
             getattr(self, self.func_map[tab_id])(tab_id, bot_id)
 
     def _get_active_tab_id(self):
-        active_tab_id = self.query_one("#right").get_child_by_type(TabbedContent).active
-        return active_tab_id
+        try:
+            cont = self.query_one("#right")
+            active_tab_id = cont.get_child_by_type(TabbedContent).active
+            return active_tab_id
+        except:
+            return self.active_tab
 
     def _get_tab(self, tab_id):
         return next(self.query(f"#{tab_id}").results(TabPane))
 
     def _get_bot_id_from_tree(self):
-        tree = self.query_one(Tree)
-        bot_id = str(tree.cursor_node.label)
-        return bot_id
+        try:
+            sel = self.query_one("#client-select")
+            bot_id = str(sel.value)
+            return bot_id
+        except:
+            return None
+
+    def _get_bot_id_from_tree_old(self):
+        try:
+            tree = self.query_one(Tree)
+            bot_id = str(tree.cursor_node.label)
+            return bot_id
+        except:
+            return None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
+        with Container(id="above"):
+            yield Select(options=client_select_options, value="dashboard", allow_blank=False, id="client-select", prompt="Select bot client...")
 
         with Container(id="parent-container"):
-            with Container(id="left"):
-                yield Static("[@click='app.bell']Dashboard[/]")
-                yield Tree("Clients", id="client-view")
+            # with Container(id="left"):
+            #     yield Static("[@click='app.bell']Dashboard[/]")
+            #     #yield Tree("Clients", id="client-view")
+            #     # yield Select(options=client_select_options, value="dashboard", allow_blank=False, id="client-select")
             with Container(id="right"):
                 with Container(id="trades-summary"):
                     yield Static("Select a bot from the client list...", id="sel-bot-title")
@@ -169,10 +194,10 @@ class FreqText(App):
         add_node("Clients", node, clients)
 
     def on_mount(self) -> None:
-        tree = self.query_one(Tree)
-        self.add_clients(tree.root, client_dict)
-        tree.root.expand()
-        tree.focus()
+        #tree = self.query_one(Tree)
+        #self.add_clients(tree.root, client_dict)
+        #tree.root.expand()
+        #tree.focus()
 
         self.query_one("#debug-log").write(Text(f"{datetime.now(tz=timezone.utc)} : FTUI started"))
         
@@ -190,13 +215,14 @@ class FreqText(App):
         active_tab_id = self._get_active_tab_id()
         bot_id = self._get_bot_id_from_tree()
         
-        if bot_id is not None and (bot_id != "Clients"):
-            self.updating = True
-            
-            self.update_trades_summary(bot_id)
-            
-            if ("open-trades-tab" == active_tab_id):
-                self.update_open_trades_tab(active_tab_id, bot_id)
+        if bot_id is not None and bot_id != "None":
+            if (bot_id != "dashboard"):
+                self.updating = True
+                
+                self.update_trades_summary(bot_id)
+                
+                if ("open-trades-tab" == active_tab_id):
+                    self.update_open_trades_tab(active_tab_id, bot_id)
         
         self.updating = False
         
@@ -222,7 +248,7 @@ class FreqText(App):
     def action_show_tab(self, tab: str) -> None:
         self.get_child_by_type(TabbedContent).active = tab
         bot_id = self._get_bot_id_from_tree()
-        self.update_tab(active_tab_id, bot_id)
+        self.update_tab(tab, bot_id)
 
     def action_show_trade_info_dialog(self, trade_id, cl_name):
         tis = TradeInfoScreen()
@@ -234,13 +260,14 @@ class FreqText(App):
         css = CandlestickScreen()
         css.pair = pair
         css.client = client_dict[cl_name]
-        self.push_screen(css)
+        self.push_screen(css, callback=css.do_refresh)
 
     def monitor_active_tab(self, active_tab_id):
         bot_id = self._get_bot_id_from_tree()
         self.debug(f"Active tab changed: {active_tab_id}")
         self.update_tab(active_tab_id, bot_id)
 
+    @on(Tree.NodeSelected)
     def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
         event.stop()
 
@@ -250,14 +277,38 @@ class FreqText(App):
         self.query_one("#sel-bot-title").update(bot_id)
         self.update_trades_summary(bot_id)
         self.update_tab(active_tab_id, bot_id)
-        # self.update_sysinfo_header(bot_id)
-    
-    # @work(exclusive=True)
+
+    @on(Select.Changed)
+    def select_changed(self, event: Select.Changed) -> None:
+        # self.title = str(event.value)
+        event.stop()
+
+        active_tab_id = self._get_active_tab_id()
+        bot_id = str(event.value)
+        
+        self.query_one("#sel-bot-title").update(bot_id)
+        self.update_trades_summary(bot_id)
+        
+        self.update_select_options()
+        self.update_tab(active_tab_id, bot_id)        
+
+    @work(exclusive=False)
+    def update_select_options():
+        client_select_options = [db_option]        
+        for cl in client_dict:
+            ot, mt = cl.get_open_trade_count()
+            client_select_options.append((f"{ftui_client.name} : {ot}/{mt} active trades", ftui_client.name))
+        
+        sel = self.query_one("#client-select")
+        sel.options = client_select_options
+        sel.update()
+
+    @work(exclusive=True)
     def update_tab(self, tab_id, bot_id):
-        if bot_id != "Clients":
-            self.active_tab = tab_id
-            # self.run_worker(self.tab_select_func(tab_id, bot_id), exclusive=True)
-            self.tab_select_func(tab_id, bot_id)
+        if bot_id is not None and bot_id != "None":
+            if bot_id != "dashboard":
+                self.active_tab = tab_id
+                self.tab_select_func(tab_id, bot_id)
 
     def update_trades_summary(self, bot_id):
         cl = client_dict[bot_id]
@@ -732,6 +783,9 @@ def setup():
                     else:
                         ftui_client = ftuic.FTUIClient(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
                     client_dict[ftui_client.name] = ftui_client
+                    ot, mt = ftui_client.get_open_trade_count()
+                    client_select_options.append((f"{ftui_client.name} : {ot}/{mt} active trades", ftui_client.name))
+                    
                 except Exception as e:
                     raise RuntimeError('Cannot create freqtrade client') from e
         else:
@@ -754,6 +808,8 @@ def setup():
                         else:
                             ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass)
                         client_dict[ftui_client.name] = ftui_client
+                        # client_select_options.append((ftui_client.name, ftui_client.name))
+                        client_select_options.append((f"{ftui_client.name} : {ot}/{mt} active trades", ftui_client.name))
                     except Exception as e:
                         raise RuntimeError("Cannot create freqtrade client") from e
                 else:
@@ -762,6 +818,8 @@ def setup():
         try:
             ftui_client = ftuic.FTUIClient(config_path=config)
             client_dict[ftui_client.name] = ftui_client
+            # client_select_options.append((ftui_client.name, ftui_client.name))
+            client_select_options.append((f"{ftui_client.name} : {ot}/{mt} active trades", ftui_client.name))
         except Exception as e:
             raise RuntimeError('Cannot create freqtrade client') from e
 

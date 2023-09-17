@@ -109,6 +109,14 @@ class FTUIClient():
         df.rename(columns = {'open':'Open', 'close':'Close', 'high':'High', 'low':'Low'}, inplace = True)        
         return df
 
+    def get_open_trade_count(self) -> dict:
+        cl = self.rest_client
+        counts = cl.count()
+        if counts is not None and "current" in counts:
+            return (counts["current"], counts["max"])
+        
+        return (0, 0)
+
     def get_all_closed_trades(self) -> list:
         cl = self.rest_client
         ps = cl.profit()

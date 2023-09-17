@@ -1,6 +1,7 @@
-Screen {
+/* ModalScreen {
     background: $surface-darken-1;
-}
+    align: center middle;
+} */
 
 #trades-summary {
     height: 5;
@@ -70,6 +71,14 @@ TabPane > DataTable {
     height:100%;
 }
 
+#client-label {
+    /* float: left; */
+}
+
+#above {
+    height: 3;
+}
+
 #left {    
     display: none;
     background: $boost;
@@ -137,17 +146,15 @@ FreqText.-show-clients #left {
     overflow: auto scroll;  
     min-width: 100%;        
 }
+
 #info {
     width: auto;    
 }
 
 #info-dialog {
-    height: 100%;
-    width: 100%;
     margin: 4 8;
-    background: $panel 50%;
     color: $text;
-    border: tall rgba(255, 255, 255, 0.3);
+    border: rgba(255, 255, 255, 0.3);
     padding: 1 2;
     layout: grid;
     grid-size: 3;
@@ -156,20 +163,20 @@ FreqText.-show-clients #left {
 
 #dt-dialog {
     height: 1fr;
-    width: 100%;
+    /* width: 100%; */
     margin: 4 8;
-    background: $panel 50%;
+    /* background: $panel 50%; */
     color: $text;
-    border: tall rgba(255, 255, 255, 0.3);
+    border: rgba(255, 255, 255, 0.3);
     padding: 1 2;
 }
 
 #chart-dialog {
-    height: 100%;
-    width: 100%;
-    background: $panel 50%;
+    /* height: 80%;
+    width: 80%; */
+    /* background: $panel 50%; */
     color: $text;
-    border: tall rgba(255, 255, 255, 0.3);
+    border: rgba(255, 255, 255, 0.3);
 }
 
 

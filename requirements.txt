@@ -1,4 +1,7 @@
 pandas
 numpy
 plotext
-textual>=0.17.0
+requests
+python-rapidjson
+PyYaml
+textual>=0.37.1
