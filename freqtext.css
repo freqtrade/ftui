@@ -76,6 +76,8 @@ TabPane > DataTable {
 }
 
 #above {
+    margin-top: 2px;
+    padding-top: 2px;
     height: 3;
 }
 

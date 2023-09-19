@@ -161,10 +161,11 @@ class CandlestickScreen(BasicModal):
         dtd = self.query_one('#dt_dialog')
         dtd.update("Done")
 
-    @work(exclusive=True)
+    # @work(exclusive=False)
     def update_candles(self):
         #candles = self.client.get_pair_dataframe(self.pair, limit=self.limit)
         #self.plot = self.plotextMixin(width=self.parent.size.width, height=self.parent.size.height, title = self.pair, candles = candles)
+        
         # self.post_message(self.Change(item=self.item))
         sleep(1)
 
