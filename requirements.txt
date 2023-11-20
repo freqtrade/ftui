@@ -1,7 +1,6 @@
 pandas
 numpy
-plotext
 requests
 python-rapidjson
 PyYaml
-textual>=0.37.1
+textual>=0.41.0

@@ -51,6 +51,7 @@ from textual.widgets.tree import TreeNode
 
 import rest_client as ftrc
 import ftui_client as ftuic
+import ftui_helpers as fth
 
 from ftui_screens import CandlestickScreen, TradeInfoScreen, ProfitChartPanel
 import plotext as f
@@ -58,9 +59,9 @@ import plotext as f
 uniqclients = {}
 client_dict = {}
 
-db_option = ("Dashboard", "dashboard")
-client_select_options = [db_option]
+client_select_options = []
 
+## watch this object?
 client_dfs = {}
 
 urlre = "^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
@@ -84,6 +85,8 @@ asyncio_logger.removeHandler(sys.stdout)
 asyncio_logger.removeHandler(sys.stderr)
 asyncio_logger.addHandler(TextualHandler())
 
+args = None
+
 class HelpScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -98,16 +101,14 @@ class HelpScreen(Screen):
         yield Footer()
 
 class MainBotScreen(Screen):
+    client_dict: dict = None
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Container(id="above"):
             yield Select(options=client_select_options, value="dashboard", allow_blank=False, id="client-select", prompt="Select bot client...")
 
         with Container(id="parent-container"):
-            # with Container(id="left"):
-            #     yield Static("[@click='app.bell']Dashboard[/]")
-            #     #yield Tree("Clients", id="client-view")
-            #     # yield Select(options=client_select_options, value="dashboard", allow_blank=False, id="client-select")
             with Container(id="right"):
                 with Container(id="trades-summary"):
                     yield Static("Select a bot from the client list...", id="sel-bot-title")
@@ -115,9 +116,6 @@ class MainBotScreen(Screen):
 
                 with TabbedContent(initial="open-trades-tab"):
                     
-                    #with TabPane("Summary", id="all-bot-summary-tab")
-                    #    yield DataTable(id="all-bot-summary-table")
-
                     with TabPane("Open Trades", id="open-trades-tab"):
                         yield DataTable(id="open-trades-table")
 
@@ -134,12 +132,79 @@ class MainBotScreen(Screen):
                         yield Log(id="log") #, wrap=True)
                         # yield Container(id="sysinfo-panel")
 
-                    # with TabPane("Help", id="help-tab"):
-                    #     yield Markdown("#Hello", id="help")
-
                     with TabPane("Debug", id="debug-tab"):
                         yield Log(id="debug-log")
 
+        yield Footer()
+
+    def debug(self, msg):
+        debuglog = self.query_one("#debug-log")
+        debuglog.write(msg)
+    
+
+
+class DashboardScreen(Screen):
+    client_dict: dict = None
+    num_days_daily = 7
+    retfear = {}
+
+    def _get_closed_trade_data(self):
+        for n, cl in self.client_dict.items():
+            if cl.name in client_dfs and 'tag_data' in client_dfs[cl.name]:
+                data = client_dfs[cl.name]['tag_data']
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+
+        with Container(id="above"):
+            yield Static("FTUI Dashboard")
+
+        with Container(id="parent-container"):
+            with Container(id="right"):       
+
+                yield Static(
+                    Panel(
+                        fth.closed_trades_table(
+                            client_dict=self.client_dict,
+                            num_closed_trades=7,
+                        )
+                        #id="dash-closed-profit-panel"
+                    ),
+                    id="dash-closed-profit"
+                )
+
+                yield Static(
+                    Panel(
+                        fth.daily_profit_table(
+                            self.client_dict,
+                            self.num_days_daily),
+                        title="Daily Profit",
+                        border_style="yellow",
+                        height=(self.num_days_daily+6),
+                        # id="dash-daily-profit-panel"    
+                    ),
+                    id="dash-daily-profit"
+                )
+        
+        yield Footer()
+
+class SettingsScreen(Screen):
+    mkstr = "Settings:\n\n"
+    
+    def set_args(self, yaml_args):
+        self.mkstr += str(yaml_args)
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+
+        with Container(id="above"):
+            yield Static("FTUI Settings")
+
+        with Container(id="parent-container"):
+            with Container(id="right"):      
+                yield Markdown("-- Settings")
+                yield Markdown(self.mkstr)
+        
         yield Footer()
 
 class FreqText(App):
@@ -150,17 +215,12 @@ class FreqText(App):
 
     CSS_PATH = "freqtext.css"
     BINDINGS = [
+        ("d", "switch_mode('dashboard')", "Dashboard"),
         ("b", "switch_mode('bots')", "View Bots"),
+        ("s", "switch_mode('settings')", "Settings"),
         ("h", "switch_mode('help')", "Help"),
         ("q", "quit", "Quit"),
     ]
-
-    MODES = {
-        # "dashboard": DashboadScreen,
-        "bots": MainBotScreen,  
-        # "settings": SettingsScreen,
-        "help": HelpScreen,
-    }
 
     # SCREENS = {"c_candles": CandlestickScreen(),
     #            "i_tradeinfo": TradeInfoScreen(),
@@ -183,10 +243,37 @@ class FreqText(App):
         "help-tab":"update_help_tab"
     }
 
+    dash_screen = DashboardScreen()
+    dash_screen.client_dict = client_dict
+    dash_screen.num_days_daily = 6 if not args else args.num_days_daily
+
+    bot_screen = MainBotScreen()
+    bot_screen.client_dict = client_dict
+
+    settings_screen = SettingsScreen()
+    settings_screen.set_args(args)
+
+    help_screen = HelpScreen()
+
+    MODES = {
+        "dashboard": dash_screen,
+        "bots": bot_screen,  
+        "settings": settings_screen,
+        "help": help_screen,
+    }
+
     def debug(self, msg):
         debuglog = self.query_one("#debug-log")
         debuglog.write(msg)
-        
+
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        tab_id = event.tab.id
+        bot_id = self._get_bot_id_from_tree()
+        if bot_id is not None and bot_id != "None":
+            if (bot_id != "dashboard"):        
+                if tab_id in self.func_map:
+                    getattr(self, self.func_map[tab_id])(tab_id, bot_id)                      
+
     def tab_select_func(self, tab_id, bot_id):
         self.debug(f"Attempting select {tab_id} {bot_id}")
         if tab_id in self.func_map:
@@ -211,14 +298,6 @@ class FreqText(App):
         except:
             return None
 
-    def _get_bot_id_from_tree_old(self):
-        try:
-            tree = self.query_one(Tree)
-            bot_id = str(tree.cursor_node.label)
-            return bot_id
-        except:
-            return None
-
     @classmethod
     def add_clients(self, node: TreeNode, clients: dict) -> None:
         from rich.highlighter import ReprHighlighter
@@ -237,11 +316,7 @@ class FreqText(App):
         add_node("Clients", node, clients)
 
     def on_mount(self) -> None:
-        self.switch_mode("bots")
-
-        # self.query_one("#debug-log").write(Text(f"{datetime.now(tz=timezone.utc)} : FTUI started"))
-        
-        # self.watch(self.query_one("#right").get_child_by_type(TabbedContent), "active", self.monitor_active_tab)
+        self.switch_mode("dashboard")
         
         self.update_one_sec_render = self.set_interval(
             1, self.update_per_sec
@@ -279,7 +354,6 @@ class FreqText(App):
     @work(exclusive=False, thread=True)
     def update_all_dfs(self):
         for name, cl in client_dict.items():
-            # use separate runworkers here instead of @work
             cl_data = self.build_closed_trade_summary(cl)
             tag_data = self.build_enter_tag_summary(cl)
             
@@ -348,8 +422,8 @@ class FreqText(App):
         self.update_tab(active_tab_id, bot_id)        
 
     @work(exclusive=False, thread=True)
-    def update_select_options():
-        client_select_options = [db_option]        
+    def update_select_options(self):
+        client_select_options = [db_option]
         for name, cl in client_dict.items():
             ot, mt = cl.get_open_trade_count()
             client_select_options.append((f"{name} : {ot}/{mt} active trades", name))
@@ -361,9 +435,8 @@ class FreqText(App):
     @work(exclusive=True, thread=True)
     def update_tab(self, tab_id, bot_id):
         if bot_id is not None and bot_id != "None":
-            if bot_id != "dashboard":
-                self.active_tab = tab_id
-                self.tab_select_func(tab_id, bot_id)
+            self.active_tab = tab_id
+            self.tab_select_func(tab_id, bot_id)
 
     def update_trades_summary(self, bot_id):
         cl = client_dict[bot_id]
@@ -619,7 +692,7 @@ class FreqText(App):
                 otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
                 ctime = datetime.now(tz=timezone.utc)
                 
-                pairstr = t['pair'] + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
+                pairstr = t['pair'] # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
                 rpfta = round(float(t['profit_abs']), 2)
                 t_dir = "S" if t['is_short'] else "L"
                 
@@ -892,7 +965,8 @@ def setup():
 
     if not client_dict:
         raise Exception("No valid clients specified in config or --servers option")
-    
+
+
 if __name__ == "__main__":
     setup()
     ftapp = FreqText()
