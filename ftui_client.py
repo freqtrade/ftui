@@ -78,6 +78,8 @@ class FTUIClient():
 
         self.rest_client = client
         current_config = self.get_client_config()
+        if 'bot_name' in current_config:
+            self.name = current_config['bot_name']        
         bot_state = current_config['state']
         runmode = current_config['runmode']
         strategy = current_config['strategy']

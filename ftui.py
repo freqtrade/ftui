@@ -46,7 +46,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive, var
 from textual.screen import Screen, ModalScreen
-from textual.widgets import Button, DataTable, Footer, Header, Static, Select, Log, Tree, Markdown, TabbedContent, TabPane
+from textual.widgets import Button, Collapsible, DataTable, Footer, Header, Static, Select, Log, Tree, Markdown, TabbedContent, TabPane
 from textual.widgets.tree import TreeNode
 
 import rest_client as ftrc
@@ -106,7 +106,7 @@ class MainBotScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Container(id="above"):
-            yield Select(options=client_select_options, value="dashboard", allow_blank=False, id="client-select", prompt="Select bot client...")
+            yield Select(options=client_select_options, allow_blank=False, id="client-select", prompt="Select bot client...")
 
         with Container(id="parent-container"):
             with Container(id="right"):
@@ -161,30 +161,36 @@ class DashboardScreen(Screen):
 
         with Container(id="parent-container"):
             with Container(id="right"):       
+                with Collapsible(title="All Open Trades", id="dsh-op-collap", collapsed=False):
+                    yield DataTable(
+                        id="all-open-trades-table"
+                    )
+                
+                with Collapsible(title="All Closed Trades", collapsed=True):
+                    yield Static(
+                        Panel(
+                            fth.closed_trades_table(
+                                client_dict=self.client_dict,
+                                num_closed_trades=7,
+                            )
+                            #id="dash-closed-profit-panel"
+                        ),
+                        id="dash-closed-profit"
+                    )
 
-                yield Static(
-                    Panel(
-                        fth.closed_trades_table(
-                            client_dict=self.client_dict,
-                            num_closed_trades=7,
-                        )
-                        #id="dash-closed-profit-panel"
-                    ),
-                    id="dash-closed-profit"
-                )
-
-                yield Static(
-                    Panel(
-                        fth.daily_profit_table(
-                            self.client_dict,
-                            self.num_days_daily),
-                        title="Daily Profit",
-                        border_style="yellow",
-                        height=(self.num_days_daily+6),
-                        # id="dash-daily-profit-panel"    
-                    ),
-                    id="dash-daily-profit"
-                )
+                with Collapsible(title="All Closed Trades", collapsed=True):
+                    yield Static(
+                        Panel(
+                            fth.daily_profit_table(
+                                self.client_dict,
+                                self.num_days_daily),
+                            title="Daily Profit",
+                            border_style="yellow",
+                            height=(self.num_days_daily+6),
+                            # id="dash-daily-profit-panel"    
+                        ),
+                        id="dash-daily-profit"
+                    )
         
         yield Footer()
 
@@ -268,11 +274,11 @@ class FreqText(App):
 
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         tab_id = event.tab.id
-        bot_id = self._get_bot_id_from_tree()
-        if bot_id is not None and bot_id != "None":
-            if (bot_id != "dashboard"):        
+        bot_id = self._get_bot_id_from_client_list()
+        if self.MODES['bots'].is_current:
+            if bot_id is not None and bot_id != "None":
                 if tab_id in self.func_map:
-                    getattr(self, self.func_map[tab_id])(tab_id, bot_id)                      
+                    getattr(self, self.func_map[tab_id])(tab_id, bot_id)
 
     def tab_select_func(self, tab_id, bot_id):
         self.debug(f"Attempting select {tab_id} {bot_id}")
@@ -290,30 +296,13 @@ class FreqText(App):
     def _get_tab(self, tab_id):
         return next(self.query(f"#{tab_id}").results(TabPane))
 
-    def _get_bot_id_from_tree(self):
+    def _get_bot_id_from_client_list(self):
         try:
             sel = self.query_one("#client-select")
             bot_id = str(sel.value)
             return bot_id
         except:
             return None
-
-    @classmethod
-    def add_clients(self, node: TreeNode, clients: dict) -> None:
-        from rich.highlighter import ReprHighlighter
-        highlighter = ReprHighlighter()
-
-        def add_node(name: str, node: TreeNode, data: object) -> None:
-            if isinstance(data, dict): # client_dict
-                node._label = Text(f"{name}")
-                for cl_name, ftui_client in data.items():
-                    new_node = node.add("")
-                    add_node(f"{cl_name}", new_node, ftui_client)
-            elif isinstance(data, ftuic.FTUIClient): # actual client
-                node._label = Text(f"{name}")
-                node._allow_expand = False
-
-        add_node("Clients", node, clients)
 
     def on_mount(self) -> None:
         self.switch_mode("dashboard")
@@ -324,14 +313,16 @@ class FreqText(App):
 
         self.update_five_sec_render = self.set_interval(
             5, self.update_per_five_sec
-        )
+        )       
 
     async def update_per_sec(self):
         active_tab_id = self._get_active_tab_id()
-        bot_id = self._get_bot_id_from_tree()
-        
-        if bot_id is not None and bot_id != "None":
-            if (bot_id != "dashboard"):
+        bot_id = self._get_bot_id_from_client_list()
+
+        if self.MODES['dashboard'].is_current:
+            self.update_dashboard_all_open_trades()
+        elif self.MODES['bots'].is_current:
+            if bot_id is not None and bot_id != "None":
                 self.updating = True
                 
                 self.update_trades_summary(bot_id)
@@ -343,9 +334,9 @@ class FreqText(App):
         
     async def update_per_five_sec(self):
         active_tab_id = self._get_active_tab_id()
-        bot_id = self._get_bot_id_from_tree()
+        bot_id = self._get_bot_id_from_client_list()
         
-        if bot_id is not None:
+        if self.MODES['bots'].is_current and bot_id is not None:
             if ("logs-tab" == active_tab_id):
                 self.update_logs_tab(active_tab_id, bot_id)
 
@@ -354,12 +345,14 @@ class FreqText(App):
     @work(exclusive=False, thread=True)
     def update_all_dfs(self):
         for name, cl in client_dict.items():
+            op_data = self.build_open_trade_summary(cl) # list of tuples
             cl_data = self.build_closed_trade_summary(cl)
             tag_data = self.build_enter_tag_summary(cl)
             
             if cl.name not in client_dfs:
                 client_dfs[name] = {}
             
+            client_dfs[name]['op_data'] = op_data
             client_dfs[name]['cl_data'] = cl_data
             client_dfs[name]['tag_data'] = tag_data
 
@@ -376,8 +369,16 @@ class FreqText(App):
 
     def action_show_tab(self, tab: str) -> None:
         self.get_child_by_type(TabbedContent).active = tab
-        bot_id = self._get_bot_id_from_tree()
+        bot_id = self._get_bot_id_from_client_list()
         self.update_tab(tab, bot_id)
+
+    def action_switch_to_bot(self, bot_id) -> None:
+        self.switch_mode("bots")
+        self.query_one("#client-select").value = bot_id
+        self.update_trades_summary(bot_id)
+
+        self.update_select_options()
+        self.update_tab("open-trades-tab", bot_id)
 
     def action_show_trade_info_dialog(self, trade_id, cl_name):
         tis = TradeInfoScreen()
@@ -392,19 +393,8 @@ class FreqText(App):
         self.push_screen(css, callback=css.do_refresh)
 
     def monitor_active_tab(self, active_tab_id):
-        bot_id = self._get_bot_id_from_tree()
+        bot_id = self._get_bot_id_from_client_list()
         self.debug(f"Active tab changed: {active_tab_id}")
-        self.update_tab(active_tab_id, bot_id)
-
-    @on(Tree.NodeSelected)
-    def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
-        event.stop()
-
-        active_tab_id = self._get_active_tab_id()
-        bot_id = str(event.node.label)
-        
-        self.query_one("#sel-bot-title").update(bot_id)
-        self.update_trades_summary(bot_id)
         self.update_tab(active_tab_id, bot_id)
 
     @on(Select.Changed)
@@ -437,6 +427,35 @@ class FreqText(App):
         if bot_id is not None and bot_id != "None":
             self.active_tab = tab_id
             self.tab_select_func(tab_id, bot_id)
+
+    @work(exclusive=False, thread=True)
+    def update_dashboard_all_open_trades(self):
+        row_data = [
+            ("Bot", "ID", "Pair", "Profit %", "Profit", "Dur.", "S/L", "Entry"),
+        ]
+        fmt = "%Y-%m-%d %H:%M:%S"
+
+        for n, cl in client_dict.items():
+            if cl.name in client_dfs and 'op_data' in client_dfs[cl.name]:
+                data = client_dfs[cl.name]['op_data'].copy()[1:]
+                for i, v in enumerate(data):
+                    data[i] = (f"[@click=switch_to_bot('{cl.name}')]{cl.name}[/]", *v)
+                row_data.extend(data)
+        
+        if len(row_data) > 1:
+            dt = self.query_one("#all-open-trades-table")
+            dt.clear(columns=True)
+
+            rows = iter(row_data)
+            try:
+                dt.add_columns(*next(rows))
+                dt.add_rows(rows)
+            except Exception as e:
+                raise e
+            dt.refresh()
+        else:
+            dt = self.query_one("#all-open-trades-table")
+            dt.clear(columns=False)
 
     def update_trades_summary(self, bot_id):
         cl = client_dict[bot_id]
@@ -797,58 +816,6 @@ class FreqText(App):
             ))
 
         return row_data
-
-def setup_client(name=None, config_path=None, url=None, port=None, username=None, password=None):
-    if url is None:
-        config = ftrc.load_config(config_path)
-        url = config.get('api_server', {}).get('listen_ip_address', '127.0.0.1')
-        port = config.get('api_server', {}).get('listen_port', '8080')
-        
-        if username is None and password is None:
-            username = config.get('api_server', {}).get('username')
-            password = config.get('api_server', {}).get('password')
-    else:
-        if config_path is not None:
-            config = ftrc.load_config(config_path)
-            
-            if username is None and password is None:
-                username = config.get('api_server', {}).get('username')
-                password = config.get('api_server', {}).get('password')
-
-    if name is None:
-        name = f"{url}:{port}"
-    
-    server_url = f"http://{url}:{port}"
-
-    client = ftrc.FtRestClient(server_url, username, password)
-    
-    if client is not None:
-        c = client.version()
-        if c is not None:
-            if "detail" in c.keys() and (c["detail"] == 'Unauthorized'):
-                raise Exception(f"Could not connect to bot [{url}:{port}]: Unauthorised")
-        else:
-            raise Exception(f"Could not connect to bot [{url}:{port}]: Check that http://{url}:{port}/api/v1/ping works in a browser, and check any firewall settings.")
-    else:
-        raise Exception(f"Could not connect to bot [{url}:{port}]: Error creating client")
-
-    current_config = client.show_config()
-    bot_state = current_config['state']
-    runmode = current_config['runmode']
-    strategy = current_config['strategy']
-    stoploss = abs(current_config['stoploss']) * 100
-    max_open_trades = current_config['max_open_trades']
-    stake_amount = current_config['stake_amount']
-    
-    stuff = [client, url, port, strategy, bot_state, runmode, stoploss, max_open_trades, stake_amount]
-    
-    print(f"Setting up {name} version {c['version']} at {server_url}: {strategy} {bot_state} {runmode}")
-    sleep(1)
-    
-    if url not in uniqclients:
-        uniqclients[url] = stuff
-    
-    return name, stuff
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""

@@ -4,4 +4,4 @@ requests
 plotext
 python-rapidjson
 PyYaml
-textual>=0.41.0
+textual>=0.47.1
