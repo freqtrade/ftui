@@ -455,26 +455,6 @@ def setup(args):
 
     print(__doc__)
 
-    if "num_days_daily" in args and args.num_days_daily is not None:
-        num_days_daily = args.num_days_daily
-    else:
-        num_days_daily = 6
-
-    if "num_closed_trades" in args and args.num_closed_trades is not None:
-        num_closed_trades = args.num_closed_trades
-    else:
-        num_closed_trades = 2
-
-    stake_coin = "USDT"
-    if args.stake_coin is not None:
-        stake_coin = args.stake_coin
-
-    informative_coin = "BTC"
-    if args.informative_coin is not None:
-        informative_coin = args.informative_coin
-
-    informative_pair = f"{informative_coin}/{stake_coin}"
-
     if args.servers is not None:
         if args.yaml:
             indicators = args.indicators

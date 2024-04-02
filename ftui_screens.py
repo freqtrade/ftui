@@ -567,9 +567,13 @@ class MainBotScreen(Screen):
         bot_id = self._get_bot_id_from_client_list()
 
         if bot_id is not None and bot_id != 'Select.BLANK':
+            self.update_select_options(bot_id)
+
             tab_id = self._get_active_tab_id()
             if tab_id != "open-trades-tab" and tab_id in self.FUNC_MAP:
                 getattr(self, self.FUNC_MAP[tab_id])(tab_id, bot_id)
+        else:
+            self.update_select_options()
 
     async def update_per_one_min(self):
         bot_id = self._get_bot_id_from_client_list()
@@ -645,7 +649,7 @@ class MainBotScreen(Screen):
         if bot_id is not None:
             sel.value = bot_id
 
-    @work(group="tabswitch_workers", exclusive=True, thread=True)
+    @work(group="tabswitch_workers", exclusive=False, thread=True)
     def update_tab(self, tab_id, bot_id):
         if bot_id is not None and bot_id != "None":
             self.tab_select_func(tab_id, bot_id)

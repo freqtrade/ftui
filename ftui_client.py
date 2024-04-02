@@ -246,19 +246,19 @@ class FTUIClient():
         bal = cl.balance()
         avail_bal = 0
         for b in bal['currencies']:
-            if b['currency'] == self.stake_coin:
+            if b['currency'] == self.config['stake_currency']:
                 avail_bal = b['balance']
                 break
 
-        if self.max_open_trades > 0:
+        if self.config['max_open_trades'] > 0:
             max_capit = 0
-            if self.stake_amount != "unlimited":
-                max_capit = float(self.stake_amount * self.max_open_trades)
+            if self.config['stake_amount'] != "unlimited":
+                max_capit = float(self.config['stake_amount'] * self.config['max_open_trades'])
             else:
-                max_capit = float(avail_bal / self.max_open_trades)
+                max_capit = float(avail_bal / self.config['max_open_trades'])
 
             if max_capit > 0:
-                risk_per_trade = ((max_capit / self.max_open_trades) / max_capit) * 100
+                risk_per_trade = ((max_capit / self.config['max_open_trades']) / max_capit) * 100
                 return -np.round(avail_bal * risk_per_trade / 100, 2)
             else:
                 return 0
