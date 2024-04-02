@@ -883,21 +883,21 @@ class MainBotScreen(Screen):
         client_dfs = self.app.client_dfs
 
         row_data = [
-            # ("Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"),
+            # ("Tag", "# Win", "# Loss", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"),
         ]
 
         if ftuic.name in client_dfs and 'tag_data' in client_dfs[ftuic.name]:
             tag_data = client_dfs[ftuic.name]['tag_data']
             tag_data = tag_data.sort_values(by='Profit', ascending=False)
 
-            for idx, t in tag_data.iterrows():
+            for idx, v in tag_data.iterrows():
                 row_data.append((
-                    f"{t[0]}",
-                    f"{t[1]}",
-                    f"{t[2]}",
-                    f"{t[3]}",
-                    f"{t[4]}",
-                    f"[red]{t[5]}" if t[5] <= 0 else f"[green]{t[5]}",
+                    f"{v['Tag']}",
+                    f"[green]{v['# Win']}/[red]{v['# Loss']}",
+                    f"{v['Avg Dur.']}",
+                    f"{v['Avg Win Dur.']}",
+                    f"{v['Avg Loss Dur.']}",
+                    fth.red_or_green(round(float(v['Profit']), 2), justify='right'),
                 ))
 
         dt = self.query_one("#tag-summary-table")

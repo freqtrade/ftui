@@ -273,7 +273,8 @@ class FreqText(App):
 
             row_data.append((
                 tag,
-                wl,
+                num_win,
+                num_loss,
                 avg_trade_dur,
                 avg_win_trade_dur,
                 avg_loss_trade_dur,
@@ -283,7 +284,7 @@ class FreqText(App):
         df = pd.DataFrame(
             row_data,
             columns= [
-                "Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"
+                "Tag", "# Win", "# Loss", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"
             ]
         )
 
