@@ -51,10 +51,10 @@ from textual.widgets import (
 from textual.widgets.tree import TreeNode
 from textual_plotext import PlotextPlot
 
-import ftui_client as ftuic
-import ftui_helpers as fth
+import ftui.ftui_client as ftuic
+import ftui.ftui_helpers as fth
 
-from ftui_screens import (
+from ftui.ftui_screens import (
     HelpScreen,
     MainBotScreen,
     SettingsScreen,
@@ -62,7 +62,7 @@ from ftui_screens import (
     TradeInfoScreen
 )
 
-urlre = "^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
+urlre = r"^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
 
 import logging
 from textual.logging import TextualHandler

@@ -31,8 +31,8 @@ import subprocess
 
 from textual_plotext import PlotextPlot
 
-import ftui_client as ftuic
-import ftui_helpers as fth
+import ftui.ftui_client as ftuic
+import ftui.ftui_helpers as fth
 
 
 class DashboardScreen(Screen):
