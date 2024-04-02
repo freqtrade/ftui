@@ -460,7 +460,7 @@ class MainBotScreen(Screen):
         "logs-tab":"update_logs_tab",
     }
 
-    client_select_options = []
+    client_select_options = [("Select Bot Client...", "Select.BLANK")]
     prev_chart_pair = None
     chart_data = {}
 
@@ -468,7 +468,7 @@ class MainBotScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Container(id="above-bot"):
-            yield Select(options=self.client_select_options, allow_blank=True, id="client-select", prompt="Select bot client...")
+            yield Select(options=self.client_select_options, allow_blank=False, id="client-select")
 
         with Container(id="parent-container"):
             with Container(id="right"):
@@ -618,7 +618,7 @@ class MainBotScreen(Screen):
         bot_id = str(event.value)
 
         if bot_id != 'Select.BLANK':
-            self.update_select_options(bot_id=bot_id)
+            # self.update_select_options(bot_id=bot_id)
 
             self.query_one("#sel-bot-title").update(bot_id)
             self.update_trades_summary(bot_id)
