@@ -51,7 +51,6 @@ from textual.widgets import (
 from textual.widgets.tree import TreeNode
 from textual_plotext import PlotextPlot
 
-import rest_client as ftrc
 import ftui_client as ftuic
 import ftui_helpers as fth
 
