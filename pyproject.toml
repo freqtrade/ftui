@@ -6,10 +6,10 @@ build-backend = "hatchling.build"
 name = "ftui"
 dynamic = ["version"]
 
-# authors = [
-#   {name = "Freqtrade Team"},
-#   {name = "Freqtrade Team", email = "freqtrade@protonmail.com"},
-# ]
+authors = [
+  {name = "froggleston"},
+  {name = "Freqtrade Team", email = "freqtrade@protonmail.com"},
+]
 
 description = "Freqtrade TUI"
 readme = "README.md"
@@ -35,7 +35,7 @@ dependencies = [
     'requests',
     'python-rapidjson',
     'PyYaml',
-    'textual>=0.50.0',
+    'textual>=0.55.1',
     'textual_plotext',
     'freqtrade-client',
 ]
@@ -48,7 +48,7 @@ Documentation = "https://freqtrade.io"
 
 
 [project.scripts]
-freqtrade-ui = "ftui.ftui:main"
+ftui = "ftui.ftui:main"
 
 [tool.hatch.build.targets.sdist]
 # where = ["."]

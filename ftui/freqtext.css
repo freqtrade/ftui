@@ -54,7 +54,7 @@ DataTable {
     width: 20;
     overflow: auto;
     height: 1fr;
-    border: white;
+    border: darkgray;
     /* scrollbar-gutter: stable; */
     /* margin: 2 2; */
 }
@@ -191,13 +191,14 @@ ListView Label {
 }
 
 #bot-chart-container {
-    margin-right: -1;
     height: auto;
+    padding-left: 2;
+    padding-right: 2;
 }
 
 #bot-chart-container Collapsible {
-    margin-right: -1;
     border-left: #222;
+    margin-left: -2;
 }
 
 #bot-chart-container CollapsibleTitle {
