@@ -120,7 +120,6 @@ class FreqText(App):
 
     ## setup screens
     dash_screen = DashboardScreen()
-    dash_screen.num_days_daily = 6 if not args else args.num_days_daily
 
     bot_screen = MainBotScreen()
 
@@ -456,20 +455,10 @@ def setup(args):
 
     print(__doc__)
 
-    if "header_size" in args and args.header_size is not None:
-        header_size = args.header_size
-    else:
-        header_size = 3
-
-    if "side_panel_minimum_size" in args and args.side_panel_minimum_size is not None:
-        side_panel_minimum_size = args.side_panel_minimum_size
-    else:
-        side_panel_minimum_size = 114
-
     if "num_days_daily" in args and args.num_days_daily is not None:
         num_days_daily = args.num_days_daily
     else:
-        num_days_daily = 5
+        num_days_daily = 6
 
     if "num_closed_trades" in args and args.num_closed_trades is not None:
         num_closed_trades = args.num_closed_trades
@@ -568,6 +557,7 @@ if __name__ == "__main__":
         op_data = ftapp._get_open_trade_dataframe(cl)
         cl_data = ftapp._get_closed_trade_dataframe(cl)
         tag_data = ftapp._get_enter_tag_dataframe(cl)
+        perf_data = ftapp._get_performance_dataframe(cl)
 
         if cl.name not in ftapp.client_dfs:
             ftapp.client_dfs[name] = {}
@@ -575,6 +565,7 @@ if __name__ == "__main__":
         ftapp.client_dfs[name]['op_data'] = op_data
         ftapp.client_dfs[name]['cl_data'] = cl_data
         ftapp.client_dfs[name]['tag_data'] = tag_data
+        ftapp.client_dfs[name]['perf_data'] = perf_data
 
         if cl_data is not None and not cl_data.empty:
             all_closed_df = pd.concat([all_closed_df, cl_data])

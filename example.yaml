@@ -1,0 +1,21 @@
+---
+servers:
+
+    - name        : "botA"
+      username    : "you"
+      password    : "your_password"
+      ip          : 1.2.3.4
+      port        : 8080
+    - name        : "botB"
+      username    : "you"
+      password    : "your_password"
+      ip          : 1.2.3.4
+      port        : 8081
+
+    - name        : "botC"
+      username    : "you"
+      password    : "your_password"
+      ip          : 5.6.7.8
+      port        : 8080
+
+debug: False
