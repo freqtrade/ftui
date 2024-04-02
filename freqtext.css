@@ -3,14 +3,6 @@
     align: center middle;
 } */
 
-#trades-summary {
-    height: 5;
-    width: 100%;
-    margin-left: 1;
-    margin-right: 1;
-    border-bottom: white;
-}
-
 #all-bots-summary-title {
     background: blanchedalmond;
     color: black;
@@ -22,27 +14,23 @@
     color: black;
     height: 1;
     text-align: center;
-    /* margin-left: 1;
-    margin-right: 1; */
+    margin-left: 1;
+    margin-right: 1;
 }
 
 TabbedContent {
     height: 1fr;
-    /* border: blue; */
 }
 
 ContentSwitcher {
-    /* border-bottom: white; */
     height: 1fr;
 }
 
 TabPane {
-    layout: vertical;    
-    /* border: mediumvioletred; */
+    layout: vertical;
     width:100%;
     height: 1fr;
     overflow: auto;
-    /* scrollbar-gutter: stable; */
 }
 
 TabPane > DataTable {
@@ -50,10 +38,98 @@ TabPane > DataTable {
     overflow: auto;
 }
 
+TabPane > Static {
+    margin-left: -1;
+    margin-right: -1;
+    overflow: auto;
+}
+
+DataTable {
+    scrollbar-gutter: stable;
+    padding-right: 4;
+}
+
+#whitelist {
+    dock: left;
+    width: 20;
+    overflow: auto;
+    height: 1fr;
+    border: white;
+    /* scrollbar-gutter: stable; */
+    /* margin: 2 2; */
+}
+
+ListView Label {
+    padding: 1 2;
+}
+
+#dash-container {
+    overflow: auto;
+    height: 100%;
+}
+
+#dash-all-trade-summary {
+    min-height: 5;
+    height: auto;
+    border: red;
+}
+
+#dash-container > DataTable {
+    margin-left: 1;
+}
+
+#dash-collapsibles {
+    overflow: auto;
+    height: auto;
+    border: yellow;
+}
+
+#dash-collapsibles Collapsible {
+    margin-left: -1;
+    margin-right: 1;
+    border-left: #222;
+    padding-top: -1;
+    padding-left: 1;
+}
+
+#dash-collapsibles CollapsibleTitle {
+    width: 1fr;
+    background: initial;
+    padding-top: 1;
+    height: 3;
+}
+
+#dash-collapsibles Collapsible Container {
+    padding-top: 1;
+    margin-left: -1;
+    margin-right: -1;
+}
+
+.bg-static-default {
+    background: #222;
+}
+
+#dash-cumprof-profit {
+    height: 32;
+    width: 100%;
+    padding-left: 1;
+    padding-right: 1;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+#above-bot {
+    layout: horizontal;
+    overflow: auto;
+    height: auto;
+    margin-left: 1;
+    margin-right: 1;
+    margin-top: 1;
+}
+
 #debug-log {
     height: 1fr;
     width: 100%;
-    /* border: green; */
     overflow: auto;
     scrollbar-gutter: stable;
 }
@@ -63,25 +139,32 @@ TabPane > DataTable {
     width: 100%;
     /* border: green; */
     overflow: auto;
-    scrollbar-gutter: stable;    
+    scrollbar-gutter: stable;
 }
 
 #parent-container {
     width:100%;
-    height:100%;
-}
-
-#client-label {
-    /* float: left; */
+    height:1fr;
 }
 
 #above {
-    /* margin-top: 2;
-    padding-top: 2; */
-    height: 3;
+    layout: horizontal;
+    overflow: auto;
+
+    height: auto;
+
+    border: green;
+
+    padding-top: 1;
+    padding-bottom: 1;
+    padding-left: 6;
 }
 
-#left {    
+#above > Container {
+    height: 5;
+}
+
+#left {
     display: none;
     background: $boost;
     scrollbar-gutter: stable;
@@ -94,15 +177,55 @@ TabPane > DataTable {
 }
 
 #right {
-    /* dock: right; */
     overflow: auto;
-    height: 1fr;
-    border: yellow;
+    height: 100%;
+    width: 100%;
 }
+
+#trades-summary {
+    width: 100%;
+    height: auto;
+    margin-left: 1;
+    margin-right: 1;
+    margin-top: 1;
+}
+
+#bot-chart-container {
+    margin-right: -1;
+    height: auto;
+}
+
+#bot-chart-container Collapsible {
+    margin-right: -1;
+    border-left: #222;
+}
+
+#bot-chart-container CollapsibleTitle {
+    width: 1fr;
+    background: initial;
+    padding-top: 1;
+    height: 3;
+}
+
+#bot-chart-container Collapsible > Container {
+    padding-top: 1;
+    background: initial;
+    height: 33;
+}
+
+#bot-chart {
+    height: 32;
+    width: 100%;
+    padding-left: 1;
+    padding-right: 1;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
 
 #top-right {
     height: 100%;
-    background: $panel;
+    /* background: $panel; */
     border: mediumvioletred;
     /* overflow: auto;
     width: auto; */
@@ -140,17 +263,17 @@ TabPane > DataTable {
 }
 
 FreqText.-show-clients #left {
-    display: block;        
+    display: block;
     max-width: 50%;
 }
 
 #info-view {
-    overflow: auto scroll;  
-    min-width: 100%;        
+    overflow: auto scroll;
+    min-width: 100%;
 }
 
 #info {
-    width: auto;    
+    width: auto;
 }
 
 #info-dialog {

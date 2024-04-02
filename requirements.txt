@@ -1,7 +1,8 @@
 pandas
 numpy
 requests
-plotext
 python-rapidjson
 PyYaml
-textual>=0.47.1
+textual>=0.50.0
+textual_plotext
+freqtrade-client

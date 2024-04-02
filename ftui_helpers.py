@@ -1,6 +1,9 @@
 from datetime import datetime, timezone, timedelta
 import requests
 
+import numpy as np
+import pandas as pd
+
 from rich import box
 from rich.align import Align
 from rich.console import Console, Group
@@ -17,6 +20,25 @@ from rich.table import Table
 from rich.text import Text
 from rich.rule import Rule
 
+from textual import log
+
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+def red_or_green(val, justify="left"):
+    if val <= 0:
+        return Text(str(f"{val}"), style="red", justify=justify)
+    else:
+        return Text(str(f"{val}"), style="green", justify=justify)
+
+def set_red_green_widget_colour(w, val):
+    if val <= 0:
+        w.styles.color = "red"
+    else:
+        w.styles.color = "green"
 
 # thanks @rextea!
 def fear_index(num_days_daily, retfear = {}):
@@ -30,7 +52,7 @@ def fear_index(num_days_daily, retfear = {}):
             }
         ]
     }
-    
+
     if not retfear:
         resp = requests.get(f'https://api.alternative.me/fng/?limit={num_days_daily}&date_format=kr')
     else:
@@ -49,33 +71,49 @@ def fear_index(num_days_daily, retfear = {}):
     else:
         prev_resp = default_resp
         df_gf = self.prev_resp['data']
-    
+
     colourmap = {}
     colourmap['Extreme Fear'] = '[red]'
     colourmap['Fear'] = '[lightred]'
     colourmap['Neutral'] = '[yellow]'
     colourmap['Greed'] = '[lightgreen]'
     colourmap['Extreme Greed'] = '[green]'
-    
+
     for i in df_gf:
         retfear[i['timestamp']] = f"{colourmap[i['value_classification']]}{i['value_classification']}"
-    
+
     return retfear
+
+def dash_all_bot_summary(row_data) -> Table:
+    table = Table(expand=True, box=box.SIMPLE_HEAD)
+
+    table.add_column("Open", style="white", justify="left", ratio=1, no_wrap=True)
+    table.add_column("Closed", style="white", justify="left", ratio=1, no_wrap=True)
+    table.add_column("Daily", style="white", justify="left", ratio=1, no_wrap=True)
+    table.add_column("Weekly", style="white", justify="left", ratio=1, no_wrap=True)
+    table.add_column("Monthly", style="white", justify="left", ratio=1, no_wrap=True)
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
 
 def daily_profit_table(client_dict, num_days_daily) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     table.add_column("Date", style="white", no_wrap=True)
     table.add_column("Fear", style="white", no_wrap=True)
-    
+
     fear = fear_index(num_days_daily)
-    
+
     for n, client in client_dict.items():
         table.add_column(f"{n}", style="yellow", justify="right")
         table.add_column("#", style="cyan", justify="left")
-    
+
     dailydict = {}
-    
+
     for n, cl in client_dict.items():
         t = cl.rest_client.daily(days=num_days_daily)
         for day in t['data']:
@@ -84,130 +122,37 @@ def daily_profit_table(client_dict, num_days_daily) -> Table:
             else:
                 dailydict[day['date']].append(f"{round(float(day['abs_profit']),2)} {t['stake_currency']}")
                 dailydict[day['date']].append(f"{day['trade_count']}")
-    
+
     for day, vals in dailydict.items():
         table.add_row(
             *vals
         )
-    
-    return table
-
-def closed_trades_table(client_dict, num_closed_trades) -> Table:
-    table = Table(expand=True, box=box.HORIZONTALS)
-    
-    table.add_column("ID", style="white", no_wrap=True)
-    table.add_column("Bot", style="yellow", no_wrap=True)
-    table.add_column("Strat", style="cyan")
-    table.add_column("Pair", style="magenta", no_wrap=True)
-    table.add_column("Profit %", justify="right")
-    table.add_column("Profit", justify="right")
-    table.add_column("Dur.", justify="right")
-    table.add_column("Exit", justify="right")
-    
-    fmt = "%Y-%m-%d %H:%M:%S"
-    
-    for n, cl in client_dict.items():
-        trades = cl.get_all_closed_trades()
-        if trades is not None:
-            for t in trades[:num_closed_trades]:
-                otime = datetime.strptime(t['open_date'], fmt).astimezone(tz=timezone.utc)
-                ctime = datetime.strptime(t['close_date'], fmt).astimezone(tz=timezone.utc)
-                rpfta = round(float(t['profit_abs']), 2)
-
-                table.add_row(
-                    f"{t['trade_id']}",
-                    f"{n}",
-                    f"{t['strategy']}",
-                    f"{t['pair']}",
-                    f"[red]{t['profit_pct']}" if t['profit_pct'] <= 0 else f"[green]{t['profit_pct']}",
-                    f"[red]{rpfta}" if rpfta <= 0 else f"[green]{rpfta}",
-                    f"{str(ctime-otime).split('.')[0]}",
-                    f"{t['exit_reason']}"
-                )
 
     return table
-
-    def build_enter_tag_summary(self, ftuic):
-        row_data = [
-            ("Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"),
-        ]
-        fmt = "%Y-%m-%d %H:%M:%S"
-
-        # get dict of bot to trades
-        trades_by_tag = {}
-
-        for at in ftuic.get_all_closed_trades():
-            if at['enter_tag'] not in trades_by_tag:
-                trades_by_tag[at['enter_tag']] = []
-            
-            trades_by_tag[at['enter_tag']].append(at)
-
-        for tag, trades in trades_by_tag.items():
-            t_profit = 0.0
-            
-            tot_trade_dur = 0
-            avg_win_trade_dur = 0
-            avg_loss_trade_dur = 0
-            win_trade_dur = 0
-            num_win = 0
-            loss_trade_dur = 0
-            num_loss = 0
-
-            for t in trades:
-                profit = float(t['profit_abs'])
-                t_profit += profit
-                tdur = (datetime.strptime(t['close_date'], dfmt) - datetime.strptime(t['open_date'], dfmt)).total_seconds()
-                tot_trade_dur = tot_trade_dur + tdur
-                
-                if profit > 0:
-                    win_trade_dur = win_trade_dur + tdur
-                    num_win = num_win + 1
-                else:
-                    loss_trade_dur = loss_trade_dur + tdur
-                    num_loss = num_loss + 1
-
-            t_profit = round(t_profit, 2)
-
-            avg_trade_dur = str(timedelta(seconds = round(tot_trade_dur / len(trades), 0)))
-            if num_win > 0:
-                avg_win_trade_dur = str(timedelta(seconds = round(win_trade_dur / num_win, 0)))
-            if num_loss > 0:
-                avg_loss_trade_dur = str(timedelta(seconds = round(loss_trade_dur / num_loss, 0)))
-
-            row_data.append((
-                f"[white]{tag}",
-                f"[green]{num_win}/[red]{num_loss}",
-                f"[yellow]{avg_trade_dur}",
-                f"[green]{avg_win_trade_dur}",
-                f"[red]{avg_loss_trade_dur}",
-                f"[red]{t_profit}" if t_profit <= 0 else f"[green]{t_profit}",
-            ))
-
-        return row_data
 
 def tradeinfo(client_dict, trades_dict, indicators) -> Table:
     yesterday = (datetime.now() - timedelta(days = 1)).strftime("%Y%m%d")
-    
+
     table = Table(expand=True, box=box.HORIZONTALS)
-    
+
     table.add_column("Pair", style="magenta", no_wrap=True, justify="left")
     table.add_column("Open", no_wrap=True, justify="right")
     table.add_column("Close", no_wrap=True, justify="right")
     table.add_column("Volume", no_wrap=True, justify="right")
-    
+
     for ind in indicators:
         header_name = ind['headername']
         table.add_column(header_name, style="cyan", no_wrap=True, justify="left")
-        
+
     shown_pairs = []
-    
+
     for n, client in client_dict.items():
         cl = client[0]
         state = client[1]
-        
+
         uparrow = "\u2191"
         downarrow = "\u2193"
-        
+
         if isinstance(cl, ftrc.FtRestClient):
             if state == "running":
                 open_trades = cl.status()
@@ -217,7 +162,7 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                             try:
                                 pairjson = cl.pair_candles(t['pair'], "5m", 2)
                                 shown_pairs.append(t['pair'])
-                                
+
                                 if pairjson['columns'] and pairjson['data']:
                                     cols = pairjson['columns']
                                     data = pairjson['data']
@@ -228,14 +173,14 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                                     candle_colour = "[green]"
                                     if op >= cl:
                                         candle_colour = "[red]"
-                                    
+
                                     inds = []
-                                    
+
                                     inds.append(f"{t['pair']}")
                                     inds.append(f"{candle_colour}{round(op, 3)}")
                                     inds.append(f"{candle_colour}{round(cl, 3)}")
                                     inds.append(f"{int(pairdf['volume'].values[0])}")
-                                    
+
                                     for ind in indicators:
                                         df_colname = str(ind['colname'])
                                         round_val = ind['round_val']
@@ -258,7 +203,7 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                                             inds.append(f"{trend}[white]{dval}")
                                         else:
                                             inds.append("")
-                                    
+
                                     table.add_row(
                                         *inds
                                     )
@@ -294,7 +239,7 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                             inds.append(f"{candle_colour}{round(op, 3)}")
                             inds.append(f"{candle_colour}{round(cl, 3)}")
                             inds.append(f"{int(pairdf['volume'].values[0])}")
-                            
+
                             for ind in indicators:
                                 df_colname = str(ind['colname'])
                                 round_val = ind['round_val']
@@ -309,7 +254,7 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                                         trend = f"[green]{uparrow} "
                                     else:
                                         trend = "[cyan]- "
-                                    
+
                                     if round_val == 0:
                                         dval = int(curr_ind)
                                     else:
@@ -317,7 +262,7 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                                     inds.append(f"{trend}[white]{dval}")
                                 else:
                                     inds.append("")
-                            
+
                             table.add_row(
                                 *inds
                             )
@@ -325,5 +270,179 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                         ## noone likes exceptions
                         #print(e)
                         pass
-    
+
+    return table
+
+def dash_trades_summary(row_data, footer={"all_open_profit":"0", "num_wins_losses": "0/0", "all_total_profit": "0"}) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS, show_footer=True)
+
+    # ("Bot", "# Trades", "Open Profit", "W/L", "Winrate", "Exp.", "Exp. Rate", "Med W", "Med L", "Tot. Profit")
+    table.add_column("Bot", style="yellow", no_wrap=True)
+    table.add_column("Start", style="white", no_wrap=True)
+    table.add_column("# Trades", no_wrap=True)
+    table.add_column("Open Profit", style="blue", justify="right", no_wrap=True)
+    table.add_column("W/L", justify="right", no_wrap=True)
+    table.add_column("Winrate", justify="right", no_wrap=True)
+    table.add_column("Exp.", justify="right", no_wrap=True)
+    table.add_column("Exp. Rate", justify="right", no_wrap=True)
+    table.add_column("Med. W", justify="right", no_wrap=True)
+    table.add_column("Med. L", justify="right", no_wrap=True)
+    table.add_column("Tot. Profit", justify="right", no_wrap=True)
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    table.columns[3].footer = footer["all_open_profit"]
+    table.columns[4].footer = footer["num_wins_losses"]
+    table.columns[10].footer = footer["all_total_profit"]
+
+    return table
+
+
+def dash_open_trades_table(row_data) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    # ("Bot", "ID", "Pair", "Open Rate", "Current Rate", "Stop %", "Profit %", "Profit", "Dur.", "S/L", "Entry")
+    table.add_column("Bot", style="yellow", no_wrap=True)
+    table.add_column("ID", style="white", no_wrap=True)
+    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Open Rate", style="white", no_wrap=True)
+    table.add_column("Rate", style="white", no_wrap=True)
+    table.add_column("Stop %", no_wrap=True)
+    table.add_column("Profit %", justify="right")
+    table.add_column("Profit", justify="right")
+    table.add_column("Dur.", justify="right")
+    table.add_column("S/L", justify="center")
+    table.add_column("Tag", justify="center")
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
+
+
+def dash_closed_trades_table(row_data) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    # ("Bot", "ID", "Pair", "Profit %", "Profit", "Dur.", "Exit")
+    table.add_column("Bot", style="yellow", no_wrap=True)
+    table.add_column("ID", style="white", no_wrap=True)
+    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Profit %", justify="right")
+    table.add_column("Profit", justify="right")
+    table.add_column("Open Date", justify="right")
+    table.add_column("Dur.", justify="right")
+    table.add_column("Enter", justify="left")
+    table.add_column("Exit", justify="left")
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
+
+def dash_cumulative_profit_plot_data(trades, bot=None, pair=None):
+    if trades.shape[0] > 0 and bot is not None:
+        # Filter trades to one bot
+        trades = trades.loc[trades['Bot'] == bot].copy()
+
+        # Filter trades to one pair
+        if pair is not None:
+            trades = trades.loc[trades['Pair'] == pair].copy()
+
+    s = trades.resample('D', on='Open Date')['Profit'].sum()
+
+    data = pd.DataFrame(index=s.index, data={'binned': s.values})
+    data['plot_cumprof'] = data['binned'].cumsum().round(2)
+    data['plot_cumprof'].ffill(inplace=True)
+
+    return data
+
+
+def bot_trades_summary_table(row_data) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    table.add_column("Start", style="white", no_wrap=True)
+    table.add_column("# Trades", no_wrap=True)
+    table.add_column("Open Profit", style="blue", justify="right", no_wrap=True)
+    table.add_column("W/L", justify="right", no_wrap=True)
+    table.add_column("Winrate", justify="right", no_wrap=True)
+    table.add_column("Exp.", justify="right", no_wrap=True)
+    table.add_column("Exp. Rate", justify="right", no_wrap=True)
+    table.add_column("Med. W", justify="right", no_wrap=True)
+    table.add_column("Med. L", justify="right", no_wrap=True)
+    table.add_column("Tot. Profit", justify="right", no_wrap=True)
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
+
+def bot_open_trades_table(row_data) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    # ("ID", "Pair", "Open Rate", "Current Rate", "Stop %", "Profit %", "Profit", "Dur.", "S/L", "Entry")
+    table.add_column("ID", style="white", no_wrap=True)
+    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Open Rate", style="white", no_wrap=True)
+    table.add_column("Rate", style="white", no_wrap=True)
+    table.add_column("Stop %", no_wrap=True)
+    table.add_column("Profit %", justify="right")
+    table.add_column("Profit", justify="right")
+    table.add_column("Dur.", justify="right")
+    table.add_column("S/L", justify="center")
+    table.add_column("Tag", justify="center")
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
+
+
+def bot_closed_trades_table(row_data) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    # ("ID", "Pair", "Profit %", "Profit", "Dur.", "Exit")
+    table.add_column("ID", style="white", no_wrap=True)
+    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Profit %", justify="right")
+    table.add_column("Profit", justify="right")
+    table.add_column("Open Date", justify="right")
+    table.add_column("Dur.", justify="right")
+    table.add_column("Enter", justify="left")
+    table.add_column("Exit", justify="left")
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
+
+
+def bot_tag_summary_table(row_data) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    # ("Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit")
+    table.add_column("Tag", style="white", no_wrap=True)
+    table.add_column("W/L", style="magenta", no_wrap=True)
+    table.add_column("Avg Dur.", justify="right")
+    table.add_column("Avg Win Dur.", justify="right")
+    table.add_column("Avg Loss Dur.", justify="right")
+    table.add_column("Profit", justify="right")
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
     return table
