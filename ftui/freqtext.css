@@ -1,0 +1,322 @@
+/* ModalScreen {
+    background: $surface-darken-1;
+    align: center middle;
+} */
+
+#all-bots-summary-title {
+    background: blanchedalmond;
+    color: black;
+    height: 1;
+}
+
+#sel-bot-title {
+    background: blanchedalmond;
+    color: black;
+    height: 1;
+    text-align: center;
+    margin-left: 1;
+    margin-right: 1;
+}
+
+TabbedContent {
+    height: 1fr;
+}
+
+ContentSwitcher {
+    height: 1fr;
+}
+
+TabPane {
+    layout: vertical;
+    width:100%;
+    height: 1fr;
+    overflow: auto;
+}
+
+TabPane > DataTable {
+    height: 1fr;
+    overflow: auto;
+}
+
+TabPane > Static {
+    margin-left: -1;
+    margin-right: -1;
+    overflow: auto;
+}
+
+DataTable {
+    scrollbar-gutter: stable;
+    padding-right: 4;
+}
+
+#whitelist {
+    dock: left;
+    width: 20;
+    overflow: auto;
+    height: 1fr;
+    border: darkgray;
+    /* scrollbar-gutter: stable; */
+    /* margin: 2 2; */
+}
+
+ListView Label {
+    padding: 1 2;
+}
+
+#dash-container {
+    overflow: auto;
+    height: 100%;
+}
+
+#dash-all-trade-summary {
+    min-height: 5;
+    height: auto;
+    border: red;
+}
+
+#dash-container > DataTable {
+    margin-left: 1;
+}
+
+#dash-collapsibles {
+    overflow: auto;
+    height: auto;
+    border: yellow;
+}
+
+#dash-collapsibles Collapsible {
+    margin-left: -1;
+    margin-right: 1;
+    border-left: #222;
+    padding-top: -1;
+    padding-left: 1;
+}
+
+#dash-collapsibles CollapsibleTitle {
+    width: 1fr;
+    background: initial;
+    padding-top: 1;
+    height: 3;
+}
+
+#dash-collapsibles Collapsible Container {
+    padding-top: 1;
+    margin-left: -1;
+    margin-right: -1;
+}
+
+.bg-static-default {
+    background: #222;
+}
+
+#dash-cumprof-profit {
+    height: 32;
+    width: 100%;
+    padding-left: 1;
+    padding-right: 1;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+#above-bot {
+    layout: horizontal;
+    overflow: auto;
+    height: auto;
+    margin-left: 1;
+    margin-right: 1;
+    margin-top: 1;
+}
+
+#debug-log {
+    height: 1fr;
+    width: 100%;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+#log {
+    height: 1fr;
+    width: 100%;
+    /* border: green; */
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+#parent-container {
+    width:100%;
+    height:1fr;
+}
+
+#above {
+    layout: horizontal;
+    overflow: auto;
+
+    height: auto;
+
+    border: green;
+
+    padding-top: 1;
+    padding-bottom: 1;
+    padding-left: 6;
+}
+
+#above > Container {
+    height: 5;
+}
+
+#left {
+    display: none;
+    background: $boost;
+    scrollbar-gutter: stable;
+    overflow: auto;
+    color: auto;
+    width: 25%;
+    height: 100%;
+    dock: left;
+    border: blue;
+}
+
+#right {
+    overflow: auto;
+    height: 100%;
+    width: 100%;
+}
+
+#trades-summary {
+    width: 100%;
+    height: auto;
+    margin-left: 1;
+    margin-right: 1;
+    margin-top: 1;
+}
+
+#bot-chart-container {
+    height: auto;
+    padding-left: 2;
+    padding-right: 2;
+}
+
+#bot-chart-container Collapsible {
+    border-left: #222;
+    margin-left: -2;
+}
+
+#bot-chart-container CollapsibleTitle {
+    width: 1fr;
+    background: initial;
+    padding-top: 1;
+    height: 3;
+}
+
+#bot-chart-container Collapsible > Container {
+    padding-top: 1;
+    background: initial;
+    height: 33;
+}
+
+#bot-chart {
+    height: 32;
+    width: 100%;
+    padding-left: 1;
+    padding-right: 1;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+
+#top-right {
+    height: 100%;
+    /* background: $panel; */
+    border: mediumvioletred;
+    /* overflow: auto;
+    width: auto; */
+}
+
+#top-right > Static {
+    /* width: auto; */
+    height: 100%;
+    margin-right: 1;
+    background: $boost;
+}
+
+#bottom-right {
+    height: 100%;
+    layout: grid;
+    grid-size: 3;
+    grid-columns: 1fr;
+    grid-rows: 1fr;
+    grid-gutter: 1;
+    background: $panel;
+    border: greenyellow;
+}
+
+#bottom-right-final {
+    column-span: 2;
+}
+
+#bottom-right > Static {
+    height: 100%;
+    background: $boost;
+}
+
+#summary-table {
+    width: 100%;
+}
+
+FreqText.-show-clients #left {
+    display: block;
+    max-width: 50%;
+}
+
+#info-view {
+    overflow: auto scroll;
+    min-width: 100%;
+}
+
+#info {
+    width: auto;
+}
+
+#info-dialog {
+    margin: 4 8;
+    color: $text;
+    border: rgba(255, 255, 255, 0.3);
+    padding: 1 2;
+    layout: grid;
+    grid-size: 3;
+    grid-columns: 2fr 1fr 1fr;
+}
+
+#dt-dialog {
+    height: 1fr;
+    /* width: 100%; */
+    margin: 4 8;
+    /* background: $panel 50%; */
+    color: $text;
+    border: rgba(255, 255, 255, 0.3);
+    padding: 1 2;
+}
+
+#chart-dialog {
+    /* height: 80%;
+    width: 80%; */
+    /* background: $panel 50%; */
+    color: $text;
+    border: rgba(255, 255, 255, 0.3);
+}
+
+
+#plot-area {
+    height: 100%;
+    width: 100%;
+    border: round red;
+}
+
+.full-width {
+    width: 100%;
+    border: round #444;
+}
+
+.center-align {
+    align: center middle;
+}

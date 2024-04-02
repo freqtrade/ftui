@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling", "wheel"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ftui"
+dynamic = ["version"]
+
+authors = [
+  {name = "froggleston"},
+  {name = "Freqtrade Team", email = "freqtrade@protonmail.com"},
+]
+
+description = "Freqtrade TUI"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: MacOS",
+    "Operating System :: Unix",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+dependencies = [
+    'pandas',
+    'numpy',
+    'requests',
+    'python-rapidjson',
+    'PyYaml',
+    'textual>=0.55.1',
+    'textual_plotext',
+    'freqtrade-client',
+]
+
+
+[project.urls]
+Homepage = "https://github.com/freqtrade/freqtrade"
+Documentation = "https://freqtrade.io"
+"Bug Tracker" = "https://github.com/freqtrade/freqtrade/issues"
+
+
+[project.scripts]
+ftui = "ftui.ftui:main"
+
+[tool.hatch.build.targets.sdist]
+# where = ["."]
+include = ["ftui*"]
+exclude = ["tests", "tests.*"]
+
+[tool.hatch.version]
+path = "ftui/__init__.py"

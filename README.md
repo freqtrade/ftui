@@ -1,1 +1,2 @@
-# freqtext
+# Freqtrade Textual User Interface (TUI)
+

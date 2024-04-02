@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ignore local yaml, keep example
+*.yaml
+!example.yaml
