@@ -506,7 +506,8 @@ def setup(args):
 
     return client_dict
 
-if __name__ == "__main__":
+
+def main():
 
     parser = argparse.ArgumentParser()
 
@@ -553,3 +554,7 @@ if __name__ == "__main__":
     ftapp.client_dfs['all_closed'] = all_closed_df
 
     ftapp.run()
+
+
+if __name__ == "__main__":
+    main()
