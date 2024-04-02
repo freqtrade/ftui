@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """A wrapper for the FtRestClient for use in the FTUI"""
 
-import sys
+import argparse, asyncio, json, os, random, re, statistics, sys, traceback
 from time import sleep
-
-import json, random, sys, os, re, argparse, traceback, statistics
 from datetime import datetime, timezone, timedelta
-from time import sleep
 from itertools import cycle
 import logging
-import requests
 
 import pandas as pd
 import numpy as np
@@ -18,10 +14,11 @@ from urllib.request import urlopen
 
 from rich.table import Table
 
-import rest_client as ftrc
+# import rest_client as ftrc
+import freqtrade_client.ft_rest_client as ftrc
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger("ftui_client")
@@ -36,6 +33,7 @@ class FTUIClient():
         self.password = password
         self.config_path = config_path
         self.rest_client = None
+        self.config = None
 
         self.prev_closed_trade_count = 0
         self.all_closed_trades = []
@@ -47,14 +45,14 @@ class FTUIClient():
             config = ftrc.load_config(self.config_path)
             self.url = config.get('api_server', {}).get('listen_ip_address', '127.0.0.1')
             self.port = config.get('api_server', {}).get('listen_port', '8080')
-            
+
             if self.username is None and self.password is None:
                 self.username = config.get('api_server', {}).get('username')
                 self.password = config.get('api_server', {}).get('password')
         else:
             if self.config_path is not None:
                 config = ftrc.load_config(self.config_path)
-                
+
                 if self.username is None and self.password is None:
                     self.username = config.get('api_server', {}).get('username')
                     self.password = config.get('api_server', {}).get('password')
@@ -65,7 +63,7 @@ class FTUIClient():
         server_url = f"http://{self.url}:{self.port}"
 
         client = ftrc.FtRestClient(server_url, self.username, self.password)
-        
+
         if client is not None:
             c = client.version()
             if c is not None:
@@ -78,18 +76,20 @@ class FTUIClient():
 
         self.rest_client = client
         current_config = self.get_client_config()
-        if 'bot_name' in current_config:
-            self.name = current_config['bot_name']        
+        self.name = current_config.get('bot_name', self.name)
         bot_state = current_config['state']
         runmode = current_config['runmode']
         strategy = current_config['strategy']
         timeframe = current_config['timeframe']
 
+        self.config = current_config
+
         print(f"Setting up {self.name} version {c['version']} at {server_url}: {strategy} {bot_state} {runmode} {timeframe}")
-        sleep(1)
-    
+        sleep(0.1)
+
     def get_client_config(self):
-        current_config = self.rest_client.show_config()
+        if self.config is None:
+            self.config = self.rest_client.show_config()
 
         # bot_state = current_config['state']
         # runmode = current_config['runmode']
@@ -98,7 +98,8 @@ class FTUIClient():
         # max_open_trades = current_config['max_open_trades']
         # stake_amount = current_config['stake_amount']
 
-        return current_config
+        # return current_config
+        return self.config
 
     def get_pair_dataframe(self, pair, limit=200) -> pd.DataFrame:
         cl = self.rest_client
@@ -107,16 +108,22 @@ class FTUIClient():
                                   limit=limit)
         cols = candles['columns']
         data = candles['data']
-        df = pd.DataFrame(data, columns=cols)
-        df.rename(columns = {'open':'Open', 'close':'Close', 'high':'High', 'low':'Low'}, inplace = True)        
-        return df
+
+        print(len(data))
+
+        if cols and data:
+            df = pd.DataFrame(data, columns=cols)
+            df.rename(columns = {'open':'Open', 'close':'Close', 'high':'High', 'low':'Low'}, inplace = True)
+            return df
+
+        return None
 
     def get_open_trade_count(self) -> dict:
         cl = self.rest_client
         counts = cl.count()
         if counts is not None and "current" in counts:
             return (counts["current"], counts["max"])
-        
+
         return (0, 0)
 
     def get_all_closed_trades(self) -> list:
@@ -143,27 +150,27 @@ class FTUIClient():
                         if cltrades is not None and 'trades' in cltrades:
                             clt = cltrades['trades']
                             if clt is not None and len(clt) > 0:
-                                trades.extend(clt)                        
+                                trades.extend(clt)
 
                 elif m == 1:
                     cltrades = cl.trades()
                     if cltrades is not None and 'trades' in cltrades:
                         clt = cltrades['trades']
                         if clt is not None and len(clt) > 0:
-                            trades.extend(clt)                    
+                            trades.extend(clt)
 
                     cltrades = cl.trades(offset=500)
                     if cltrades is not None and 'trades' in cltrades:
                         clt = cltrades['trades']
                         if clt is not None and len(clt) > 0:
-                            trades.extend(clt)                    
+                            trades.extend(clt)
                 else:
                     cltrades = cl.trades()
                     if cltrades is not None and 'trades' in cltrades:
                         clt = cltrades['trades']
                         if clt is not None and len(clt) > 0:
                             trades = clt
-                
+
                 trades.reverse()
                 self.all_closed_trades = trades
                 self.prev_closed_trade_count = len(trades)
@@ -184,22 +191,49 @@ class FTUIClient():
         profit = cl.profit()
         return profit
 
+    def get_daily_profit(self, days=1) -> dict:
+        cl = self.rest_client
+        profit = cl.daily(days=days)
+        return profit
+
+    def get_weekly_profit(self, weeks=1) -> dict:
+        cl = self.rest_client
+        profit = cl.weekly(weeks=weeks)
+        return profit
+
+    def get_monthly_profit(self, months=1) -> dict:
+        cl = self.rest_client
+        profit = cl.monthly(months=months)
+        return profit
+
+    def get_whitelist(self) -> list:
+        cl = self.rest_client
+        wl = cl.whitelist()
+        if "whitelist" in wl and wl["whitelist"]:
+            return wl["whitelist"]
+        return []
+
+    def get_performance(self) -> list:
+        cl = self.rest_client
+        perf = cl.performance()
+        return perf
+
     def get_logs(self, limit=None) -> str:
         cl = self.rest_client
-        
+
         if limit is not None:
             logjson = cl.logs(limit=limit)
         else:
             logjson = cl.logs()
-        
+
         logstr = ""
-        
+
         if logjson is not None and "logs" in logjson:
             logs = logjson['logs']
-    
+
             for logline in logs:
                 logstr += f"{logline[0]} - {logline[2]} - {logline[3]} - {logline[4]}\n"
-            
+
         return logstr
 
     def get_sys_info(self) -> list:
@@ -215,7 +249,7 @@ class FTUIClient():
             if b['currency'] == self.stake_coin:
                 avail_bal = b['balance']
                 break
-        
+
         if self.max_open_trades > 0:
             max_capit = 0
             if self.stake_amount != "unlimited":
