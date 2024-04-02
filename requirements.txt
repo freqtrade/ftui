@@ -3,6 +3,6 @@ numpy
 requests
 python-rapidjson
 PyYaml
-textual>=0.50.0
+textual>=0.55.1
 textual_plotext
 freqtrade-client

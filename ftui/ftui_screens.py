@@ -555,8 +555,6 @@ class MainBotScreen(Screen):
         bot_id = self._get_bot_id_from_client_list()
 
         if bot_id is not None and bot_id != 'Select.BLANK':
-            # self.update_select_options(bot_id=bot_id)
-
             self.update_trades_summary(bot_id)
 
             tab_id = self._get_active_tab_id()
@@ -567,13 +565,11 @@ class MainBotScreen(Screen):
         bot_id = self._get_bot_id_from_client_list()
 
         if bot_id is not None and bot_id != 'Select.BLANK':
-            self.update_select_options(bot_id)
-
             tab_id = self._get_active_tab_id()
             if tab_id != "open-trades-tab" and tab_id in self.FUNC_MAP:
                 getattr(self, self.FUNC_MAP[tab_id])(tab_id, bot_id)
-        else:
-            self.update_select_options()
+        # else:
+        #     self.update_select_options()
 
     async def update_per_one_min(self):
         bot_id = self._get_bot_id_from_client_list()
@@ -622,6 +618,8 @@ class MainBotScreen(Screen):
         bot_id = str(event.value)
 
         if bot_id != 'Select.BLANK':
+            self.update_select_options(bot_id=bot_id)
+
             self.query_one("#sel-bot-title").update(bot_id)
             self.update_trades_summary(bot_id)
 
@@ -919,16 +917,8 @@ class MainBotScreen(Screen):
 
         ## update chart
         cl = client_dict[bot_id]
-        # ot, mt = cl.get_open_trade_count()
-
-        #timeframe = cl.get_client_config()['timeframe']
-        #current_time = datetime.now(tz=timezone.utc)
-        #prev_candle_time = current_time - timedelta(minutes=timeframe[:-1])
-
-        # pair = f"BTC/{cl.get_client_config()['']}"
 
         open_data = client_dfs[cl.name]['op_data'].copy() if cl.name in client_dfs and 'op_data' in client_dfs[cl.name] else pd.DataFrame()
-
         if not open_data.empty:
             if pair is None:
                 pair = open_data['Pair'].iloc[0]
@@ -936,7 +926,15 @@ class MainBotScreen(Screen):
                 self.prev_chart_pair = pair
         else:
             if pair is None:
-                pair = "BTC/USDT"
+                if self.prev_chart_pair is not None:
+                    pair = self.prev_chart_pair
+                else:
+                    close_data = client_dfs[cl.name]['cl_data'].copy() if cl.name in client_dfs and 'cl_data' in client_dfs[cl.name] else pd.DataFrame()
+
+                    if not close_data.empty:
+                        pair = close_data['Pair'].iloc[0]
+                    else:
+                        pair = f"BTC/{cl.get_client_config()['stake_currency']}"
 
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data:
