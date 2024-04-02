@@ -446,3 +446,45 @@ def bot_tag_summary_table(row_data) -> Table:
         )
 
     return table
+
+def bot_perf_summary_table(row_data) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    # ("Pair", "# Trades", "Avg Profit %", "Total Profit"),
+    table.add_column("Pair", style="white", no_wrap=True)
+    table.add_column("# Trades", style="magenta", no_wrap=True)
+    table.add_column("Avg Profit %", justify="right")
+    table.add_column("Total Profit", justify="right")
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
+
+def bot_config(config) -> str:
+    config_text = f"""
+    [italic]Bot Info[/italic]
+    [bold]Bot Name            :[/bold] {config['bot_name']}
+    [bold]Version             :[/bold] {config['version']}
+    [bold]Runmode             :[/bold] {config['runmode']}
+    [bold]Force Entry         :[/bold] {config['force_entry_enable']}
+    [bold]Position Adjustment :[/bold] {config['position_adjustment_enable']}
+
+    [italic]Strategy Info[/italic]
+    [bold]Strategy            :[/bold] {config['strategy']}
+    [bold]Strategy Version    :[/bold] {config['strategy_version']}
+    [bold]Timeframe           :[/bold] {config['timeframe']}
+    [bold]Stoploss            :[/bold] {config['stoploss']}
+    [bold]Max Open Trades     :[/bold] {config['max_open_trades']}
+
+    [italic]Market Config[/italic]
+    [bold]Exchange            :[/bold] {config['exchange']}
+    [bold]Trading Mode        :[/bold] {config['trading_mode']}
+    [bold]Shorting            :[/bold] {config['short_allowed']}
+    [bold]Stake Currency      :[/bold] {config['stake_currency']}
+    [bold]Stake Amount        :[/bold] {config['stake_amount']}
+    """
+
+    return config_text

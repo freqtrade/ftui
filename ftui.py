@@ -290,6 +290,31 @@ class FreqText(App):
 
         return df
 
+    def _get_performance_dataframe(self, ftuic):
+        row_data = []
+
+        data = ftuic.get_performance()
+        if data is not None:
+            for t in data:
+                pairstr = t['pair'] # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
+                rpfta = round(float(t['profit_abs']), 2)
+
+                row_data.append((
+                    pairstr,
+                    t['count'],
+                    t['profit_pct'],
+                    rpfta,
+                ))
+
+        df = pd.DataFrame(
+            row_data,
+            columns= [
+                "Pair", "# Trades", "Avg Profit %", "Total Profit"
+            ]
+        )
+
+        return df
+
 
     @work(group="df_updater_worker", exclusive=False, thread=True)
     def update_all_dfs(self):
@@ -299,6 +324,7 @@ class FreqText(App):
             op_data = self._get_open_trade_dataframe(cl)
             cl_data = self._get_closed_trade_dataframe(cl)
             tag_data = self._get_enter_tag_dataframe(cl)
+            perf_data = self._get_performance_dataframe(cl)
 
             if cl.name not in self.client_dfs:
                 self.client_dfs[name] = {}
@@ -306,6 +332,7 @@ class FreqText(App):
             self.client_dfs[name]['op_data'] = op_data
             self.client_dfs[name]['cl_data'] = cl_data
             self.client_dfs[name]['tag_data'] = tag_data
+            self.client_dfs[name]['perf_data'] = perf_data
 
             if cl_data is not None and not cl_data.empty:
                 all_closed_df = pd.concat([all_closed_df, cl_data])

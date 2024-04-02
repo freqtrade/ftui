@@ -213,6 +213,11 @@ class FTUIClient():
             return wl["whitelist"]
         return []
 
+    def get_performance(self) -> list:
+        cl = self.rest_client
+        perf = cl.performance()
+        return perf
+
     def get_logs(self, limit=None) -> str:
         cl = self.rest_client
 

@@ -455,7 +455,8 @@ class MainBotScreen(Screen):
         "open-trades-tab":"update_open_trades_tab",
         "closed-trades-tab":"update_closed_trades_tab",
         "tag-summary-tab":"update_tag_summary_tab",
-        # "charts-tab":"update_charts_tab",
+        "perf-summary-tab":"update_performance_tab",
+        "config-tab":"update_config_tab",
         "logs-tab":"update_logs_tab",
     }
 
@@ -506,6 +507,18 @@ class MainBotScreen(Screen):
                     with TabPane("Tag Summary", id="tag-summary-tab"):
                         yield Static(
                             id="tag-summary-table",
+                            classes="bg-static-default"
+                        )
+
+                    with TabPane("Performance", id="perf-summary-tab"):
+                        yield Static(
+                            id="perf-summary-table",
+                            classes="bg-static-default"
+                        )
+
+                    with TabPane("Config", id="config-tab"):
+                        yield Static(
+                            id="config-summary",
                             classes="bg-static-default"
                         )
 
@@ -1014,6 +1027,55 @@ class MainBotScreen(Screen):
 
             self.app.call_from_thread(chart_container.refresh)
         chart_container.loading = False
+
+    ## bot performance tab
+    @work(group="perf_summary_worker", exclusive=True, thread=True)
+    def update_performance_tab(self, tab_id, bot_id):
+        client_dict = self.app.client_dict
+        client_dfs = self.app.client_dfs
+
+        cl = client_dict[bot_id]
+
+        tab = self._get_tab(tab_id)
+        self._render_performance_summary(cl)
+
+    def _render_performance_summary(self, ftuic):
+        client_dfs = self.app.client_dfs
+
+        row_data = [
+            # ("Pair", "# Trades", "Avg Profit %", "Total Profit"),
+        ]
+
+        if ftuic.name in client_dfs and 'perf_data' in client_dfs[ftuic.name]:
+            perf_data = client_dfs[ftuic.name]['perf_data']
+            perf_data = perf_data.sort_values(by='Total Profit', ascending=False)
+
+            for idx, v in perf_data.iterrows():
+                row_data.append((
+                    f"{v['Pair']}",
+                    f"{v['# Trades']}",
+                    fth.red_or_green(float(v['Avg Profit %']), justify='right'),
+                    fth.red_or_green(float(v['Total Profit']), justify='right'),
+                ))
+
+        dt = self.query_one("#perf-summary-table")
+        table = fth.bot_perf_summary_table(row_data)
+
+        worker = get_current_worker()
+        if not worker.is_cancelled:
+            self.app.call_from_thread(dt.update, table)
+        dt.loading = False
+
+    ## bot config tab
+    # @work(group="config_worker", exclusive=True, thread=True)
+    def update_config_tab(self, tab_id, bot_id):
+        client_dict = self.app.client_dict
+
+        cl = client_dict[bot_id]
+
+        dt = self.query_one("#config-summary")
+        c = fth.bot_config(cl.get_client_config())
+        dt.update(c)
 
     @work(group="bot_logs_worker", exclusive=False, thread=True)
     def update_logs_tab(self, tab_id, bot_id):
