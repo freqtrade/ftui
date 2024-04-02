@@ -460,7 +460,7 @@ class MainBotScreen(Screen):
         "logs-tab":"update_logs_tab",
     }
 
-    client_select_options = []
+    client_select_options = [("Select Bot Client...", "Select.BLANK")]
     prev_chart_pair = None
     chart_data = {}
 
@@ -468,7 +468,7 @@ class MainBotScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Container(id="above-bot"):
-            yield Select(options=self.client_select_options, allow_blank=True, id="client-select", prompt="Select bot client...")
+            yield Select(options=self.client_select_options, allow_blank=False, id="client-select") #, prompt="Select bot client...")
 
         with Container(id="parent-container"):
             with Container(id="right"):
@@ -567,8 +567,6 @@ class MainBotScreen(Screen):
         bot_id = self._get_bot_id_from_client_list()
 
         if bot_id is not None and bot_id != 'Select.BLANK':
-            self.update_select_options(bot_id)
-
             tab_id = self._get_active_tab_id()
             if tab_id != "open-trades-tab" and tab_id in self.FUNC_MAP:
                 getattr(self, self.FUNC_MAP[tab_id])(tab_id, bot_id)
@@ -579,7 +577,7 @@ class MainBotScreen(Screen):
         bot_id = self._get_bot_id_from_client_list()
         if bot_id is not None and bot_id != 'Select.BLANK':
             self.update_chart(bot_id, pair=self.prev_chart_pair)
-            self.update_whitelist(bot_id)
+            self.update_whitelist(bot_id, pair=self.prev_chart_pair)
 
 
     ## TAB EVENT STUFF
@@ -919,16 +917,9 @@ class MainBotScreen(Screen):
 
         ## update chart
         cl = client_dict[bot_id]
-        # ot, mt = cl.get_open_trade_count()
-
-        #timeframe = cl.get_client_config()['timeframe']
-        #current_time = datetime.now(tz=timezone.utc)
-        #prev_candle_time = current_time - timedelta(minutes=timeframe[:-1])
-
-        # pair = f"BTC/{cl.get_client_config()['']}"
-
         open_data = client_dfs[cl.name]['op_data'].copy() if cl.name in client_dfs and 'op_data' in client_dfs[cl.name] else pd.DataFrame()
 
+        # chart select fallback
         if not open_data.empty:
             if pair is None:
                 pair = open_data['Pair'].iloc[0]
@@ -936,7 +927,15 @@ class MainBotScreen(Screen):
                 self.prev_chart_pair = pair
         else:
             if pair is None:
-                pair = "BTC/USDT"
+                if self.prev_chart_pair is not None:
+                    pair = self.prev_chart_pair
+                else:
+                    close_data = client_dfs[cl.name]['cl_data'].copy() if cl.name in client_dfs and 'cl_data' in client_dfs[cl.name] else pd.DataFrame()
+
+                    if not close_data.empty:
+                        pair = close_data['Pair'].iloc[0]
+                    else:
+                        pair = f"BTC/{cl.get_client_config()['stake_currency']}"
 
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data:
@@ -1096,7 +1095,7 @@ class MainBotScreen(Screen):
         log.clear()
         log.write(logs)
 
-    def update_whitelist(self, bot_id):
+    def update_whitelist(self, bot_id, pair=None):
         client_dict = self.app.client_dict
 
         cl = client_dict[bot_id]
@@ -1104,8 +1103,8 @@ class MainBotScreen(Screen):
 
         wl = self.query_one("#whitelist")
         wl.clear()
-        for pair in whitelist:
-            wl.append(LabelItem(pair))
+        for wp in whitelist:
+            wl.append(LabelItem(wp))
 
     @on(ListView.Selected)
     def whitelist_pair_selected(self, event: ListView.Selected) -> None:
