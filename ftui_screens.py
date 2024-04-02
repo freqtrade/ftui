@@ -621,15 +621,16 @@ class MainBotScreen(Screen):
         active_tab_id = self._get_active_tab_id()
         bot_id = str(event.value)
 
-        self.query_one("#sel-bot-title").update(bot_id)
-        self.update_trades_summary(bot_id)
+        if bot_id != 'Select.BLANK':
+            self.query_one("#sel-bot-title").update(bot_id)
+            self.update_trades_summary(bot_id)
 
-        # update all tabs when select changed
-        for tab in self.FUNC_MAP.keys():
-            self.update_tab(tab, bot_id)
+            # update all tabs when select changed
+            for tab in self.FUNC_MAP.keys():
+                self.update_tab(tab, bot_id)
 
-        self.update_whitelist(bot_id)
-        self.update_chart(bot_id)
+            self.update_whitelist(bot_id)
+            self.update_chart(bot_id)
 
     @work(group="selswitch_workers", exclusive=True, thread=True)
     def update_select_options(self, bot_id=None):
