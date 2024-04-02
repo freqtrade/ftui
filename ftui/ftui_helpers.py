@@ -1,24 +1,12 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 import requests
 
 import numpy as np
 import pandas as pd
 
 from rich import box
-from rich.align import Align
-from rich.console import Console, Group
-from rich.layout import Layout
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
-from rich.prompt import Prompt, IntPrompt
-from rich.spinner import Spinner
-from rich.status import Status
-from rich.style import Style
-from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
-from rich.rule import Rule
 
 from textual import log
 

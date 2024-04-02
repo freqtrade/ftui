@@ -1,28 +1,19 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
-from time import sleep
-
-from rich.panel import Panel
-from rich.progress import Progress, BarColumn, TextColumn
-from rich.rule import Rule
-from rich.style import Style
-from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
-from rich.traceback import Traceback
 
-from textual import events, work, on
-from textual.app import App, ComposeResult
-from textual.containers import Container, Grid, Horizontal, Vertical
+from textual import work, on
+from textual.app import ComposeResult
+from textual.containers import Container
 from textual.screen import Screen, ModalScreen
-from textual.worker import Worker, get_current_worker
+from textual.worker import get_current_worker
 
-from textual.reactive import var, reactive
 from textual.widgets import (
-    Button, Collapsible, DataTable, Digits,
+    Collapsible, DataTable, Digits,
     Footer, Header, Label, ListView, ListItem,
     Log, Markdown, Select, Static, TabbedContent,
-    TabPane, Tree
+    TabPane
 )
 
 import pandas as pd
@@ -111,9 +102,6 @@ class DashboardScreen(Screen):
     def on_mount(self) -> None:
         ats = self.query_one("#dash-all-trade-summary")
         ats.loading = True
-
-        #self.update_dashboard_all_bot_summary()
-        #self.update_dashboard_all_trade_summary()
 
         summary_digits = self.query_one("#above").query(Digits)
         for sd in summary_digits:
@@ -939,7 +927,7 @@ class MainBotScreen(Screen):
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data:
             chart_container.loading = True
-            data = cl.get_pair_dataframe(pair, limit=min(cw, 200))
+            data = cl.get_pair_dataframe(pair, limit=min(max(round(cw/2), 50), 200))
             if data is not None and not data.empty:
                 self.chart_data[ckey] = data[["date","Open","Close","High","Low"]]
                 self._render_chart(cl, pair, self.chart_data[ckey])

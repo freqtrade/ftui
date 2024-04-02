@@ -17,39 +17,20 @@ Run with:
 
 """
 
-import argparse, asyncio, json, os, random, re, statistics, sys, traceback
+import argparse, re, sys
 from datetime import datetime, timezone, timedelta
-from time import sleep
-from itertools import cycle
-import requests, urllib3
 
 import pandas as pd
 import numpy as np
 
-from urllib.request import urlopen
-
-from rich.console import Console, Group
-from rich.panel import Panel
 from rich.progress import Progress, BarColumn, TextColumn
 from rich.rule import Rule
 from rich.style import Style
-from rich.syntax import Syntax
 from rich.table import Table
-from rich.text import Text
-from rich.traceback import Traceback
 
-from textual import events, work, on
-from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, ScrollableContainer, Vertical
+from textual import work
+from textual.app import App
 from textual.reactive import reactive, var
-from textual.screen import Screen, ModalScreen
-from textual.widgets import (
-    Button, Collapsible, DataTable, Digits,
-    Footer, Header, Label, Log, Markdown,
-    Select, Static, TabbedContent, TabPane, Tree
-)
-from textual.widgets.tree import TreeNode
-from textual_plotext import PlotextPlot
 
 import ftui.ftui_client as ftuic
 import ftui.ftui_helpers as fth
@@ -343,16 +324,6 @@ class FreqText(App):
         self.set_class(show_clients, "-show-clients")
 
     ## ACTIONS
-    def action_toggle_clients(self) -> None:
-        self.show_clients = (
-            not self.show_clients
-        )
-
-    def action_show_tab(self, tab: str) -> None:
-        self.get_child_by_type(TabbedContent).active = tab
-        bot_id = self._get_bot_id_from_client_list()
-        self.update_tab(tab, bot_id)
-
     def action_switch_to_bot(self, bot_id) -> None:
         current_screen = self.screen
 
@@ -367,7 +338,6 @@ class FreqText(App):
             self.MODES["bots"].timers[ts].resume()
 
         self.MODES['bots'].update_screen(bot_id)
-
 
     def action_switch_ftui_mode(self, mode) -> None:
         current_screen = self.screen
@@ -390,13 +360,6 @@ class FreqText(App):
         tis.trade_id = trade_id
         tis.client = self.client_dict[cl_name]
         self.push_screen(tis)
-
-    def action_show_pair_candlestick_dialog(self, pair, cl_name):
-        css = CandlestickScreen()
-        css.pair = pair
-        css.client = self.client_dict[cl_name]
-        self.push_screen(css, callback=css.do_refresh)
-
 
     # def update_sysinfo_header(self, bot_id):
     #     cl = client_dict[bot_id]

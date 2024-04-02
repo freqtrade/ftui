@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 """A wrapper for the FtRestClient for use in the FTUI"""
 
-import argparse, asyncio, json, os, random, re, statistics, sys, traceback
+import sys
 from time import sleep
-from datetime import datetime, timezone, timedelta
-from itertools import cycle
 import logging
 
 import pandas as pd
 import numpy as np
 
-from urllib.request import urlopen
-
-from rich.table import Table
-
-# import rest_client as ftrc
 import freqtrade_client.ft_rest_client as ftrc
 
 logging.basicConfig(
