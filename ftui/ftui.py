@@ -54,6 +54,7 @@ logging.basicConfig(
 )
 
 client_logger = logging.getLogger("ft_rest_client")
+client_logger.setLevel(logging.ERROR)
 client_logger.removeHandler(sys.stdout)
 client_logger.removeHandler(sys.stderr)
 client_logger.addHandler(TextualHandler())
