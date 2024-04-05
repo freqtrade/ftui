@@ -102,8 +102,6 @@ class FTUIClient():
         cols = candles['columns']
         data = candles['data']
 
-        print(len(data))
-
         if cols and data:
             df = pd.DataFrame(data, columns=cols)
             df.rename(columns = {'open':'Open', 'close':'Close', 'high':'High', 'low':'Low'}, inplace = True)

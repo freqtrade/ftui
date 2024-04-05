@@ -136,7 +136,7 @@ class FreqText(App):
         trades = ftuic.get_open_trades()
         if trades is not None:
             for t in trades:
-                otime = datetime.strptime(t['open_date'], self.DFMT).astimezone(tz=timezone.utc)
+                otime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
                 ctime = datetime.now(tz=timezone.utc)
 
                 pairstr = t['pair'] # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')

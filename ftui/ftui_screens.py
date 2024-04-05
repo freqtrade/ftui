@@ -946,7 +946,7 @@ class MainBotScreen(Screen):
                 if not new_data.empty:
                     chart_container.loading = True
                     self.chart_data[ckey] = pd.concat([self.chart_data[ckey], new_data])
-                    self.chart_data[ckey].drop(self.chart_data[ckey].tail(1).index,inplace=True)
+                    self.chart_data[ckey].drop(self.chart_data[ckey].head(1).index,inplace=True)
 
                 self._render_chart(cl, pair, self.chart_data[ckey])
 
