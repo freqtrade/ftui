@@ -439,13 +439,19 @@ class MainBotScreen(Screen):
 
     timers = {}
 
-    FUNC_MAP = {
+    TAB_FUNC_MAP = {
+        ## tabs
         "open-trades-tab":"update_open_trades_tab",
         "closed-trades-tab":"update_closed_trades_tab",
         "tag-summary-tab":"update_tag_summary_tab",
         "perf-summary-tab":"update_performance_tab",
         "config-tab":"update_config_tab",
         "logs-tab":"update_logs_tab",
+    }
+
+    COLLAP_FUNC_MAP = {
+        ##collapsibles
+        "bot-chrt-collap":"update_chart_container",
     }
 
     client_select_options = [("Select Bot Client...", "Select.BLANK")]
@@ -554,8 +560,8 @@ class MainBotScreen(Screen):
 
         if bot_id is not None and bot_id != 'Select.BLANK':
             tab_id = self._get_active_tab_id()
-            if tab_id != "open-trades-tab" and tab_id in self.FUNC_MAP:
-                getattr(self, self.FUNC_MAP[tab_id])(tab_id, bot_id)
+            if tab_id != "open-trades-tab" and tab_id in self.TAB_FUNC_MAP:
+                getattr(self, self.TAB_FUNC_MAP[tab_id])(tab_id, bot_id)
         # else:
         #     self.update_select_options()
 
@@ -580,12 +586,12 @@ class MainBotScreen(Screen):
         bot_id = self._get_bot_id_from_client_list()
 
         if bot_id is not None and bot_id != 'Select.BLANK':
-            if tab_id in self.FUNC_MAP:
-                getattr(self, self.FUNC_MAP[tab_id])(tab_id, bot_id)
+            if tab_id in self.TAB_FUNC_MAP:
+                getattr(self, self.TAB_FUNC_MAP[tab_id])(tab_id, bot_id)
 
     def tab_select_func(self, tab_id, bot_id):
-        if tab_id in self.FUNC_MAP:
-            getattr(self, self.FUNC_MAP[tab_id])(tab_id, bot_id)
+        if tab_id in self.TAB_FUNC_MAP:
+            getattr(self, self.TAB_FUNC_MAP[tab_id])(tab_id, bot_id)
 
     def _get_active_tab_id(self):
         try:
@@ -612,7 +618,7 @@ class MainBotScreen(Screen):
             self.update_trades_summary(bot_id)
 
             # update all tabs when select changed
-            for tab in self.FUNC_MAP.keys():
+            for tab in self.TAB_FUNC_MAP.keys():
                 self.update_tab(tab, bot_id)
 
             self.update_whitelist(bot_id)
@@ -641,20 +647,22 @@ class MainBotScreen(Screen):
         if bot_id is not None and bot_id != "None":
             self.tab_select_func(tab_id, bot_id)
 
+    def update_chart_container(self, bot_id):
+        bot_chrt_collap = self.query_one("#bot-chrt-collap")
+        if bot_chrt_collap.collapsed is False:
+            self.update_chart(bot_id, pair=self.prev_chart_pair)
+            self.update_whitelist(bot_id)
+
     def update_screen(self, bot_id):
         self.update_trades_summary(bot_id)
 
         self.update_select_options(bot_id=bot_id)
 
         # update all tabs when bot selected from dashboard
-        for tab in self.FUNC_MAP.keys():
+        for tab in self.TAB_FUNC_MAP.keys():
             self.update_tab(tab, bot_id)
 
-        bot_chrt_collap = self.query_one("#bot-chrt-collap")
-        if bot_chrt_collap.collapsed is False:
-            self.update_chart(bot_id, pair=self.prev_chart_pair)
-            self.update_whitelist(bot_id)
-
+        self.update_chart_container(bot_id)
 
     ## bot trade summary
     @work(group="bot_summary_worker", exclusive=True, thread=True)
@@ -909,9 +917,10 @@ class MainBotScreen(Screen):
         open_data = client_dfs[cl.name]['op_data'].copy() if cl.name in client_dfs and 'op_data' in client_dfs[cl.name] else pd.DataFrame()
         if not open_data.empty:
             if pair is None:
-                pair = open_data['Pair'].iloc[0]
-            else:
-                self.prev_chart_pair = pair
+                if self.prev_chart_pair is None:
+                    pair = open_data['Pair'].iloc[0]
+                    self.prev_chart_pair = pair
+                pair = self.prev_chart_pair
         else:
             if pair is None:
                 if self.prev_chart_pair is not None:
@@ -923,6 +932,7 @@ class MainBotScreen(Screen):
                         pair = close_data['Pair'].iloc[0]
                     else:
                         pair = f"BTC/{cl.get_client_config()['stake_currency']}"
+                    self.prev_chart_pair = pair
 
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data:
@@ -952,7 +962,7 @@ class MainBotScreen(Screen):
 
             else:
                 self.notify(
-                    f"No candle data for {pair} [{cl.get_client_config()['timeframe']} available. Is the pair in the whitelist?",
+                    f"No candle data for {pair} [{cl.get_client_config()['timeframe']}] available. Is the pair in the whitelist?",
                     title=f"Error: [{pair}]",
                     severity="warning",
                 )
@@ -1062,20 +1072,23 @@ class MainBotScreen(Screen):
     def update_config_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
-        cl = client_dict[bot_id]
+        if bot_id is not None and bot_id != 'Select.BLANK':
+            cl = client_dict[bot_id]
 
-        dt = self.query_one("#config-summary")
-        c = fth.bot_config(cl.get_client_config())
-        dt.update(c)
+            dt = self.query_one("#config-summary")
+            c = fth.bot_config(cl.get_client_config())
+            dt.update(c)
 
     @work(group="bot_logs_worker", exclusive=False, thread=True)
     def update_logs_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
-        cl = client_dict[bot_id]
-        tab = self._get_tab(tab_id)
-        logs = cl.get_logs(limit=self.app.loglimit)
-        self._replace_logs(logs, tab)
+        if bot_id is not None and bot_id != 'Select.BLANK':
+            cl = client_dict[bot_id]
+
+            tab = self._get_tab(tab_id)
+            logs = cl.get_logs(limit=self.app.loglimit)
+            self._replace_logs(logs, tab)
 
     def _replace_logs(self, logs, tab):
         log = tab.query_one("#log")
@@ -1086,19 +1099,46 @@ class MainBotScreen(Screen):
         client_dict = self.app.client_dict
 
         cl = client_dict[bot_id]
-        whitelist = cl.get_whitelist()
+        if bot_id is not None and bot_id != 'Select.BLANK':
+            whitelist = cl.get_whitelist()
 
-        wl = self.query_one("#whitelist")
-        wl.clear()
-        for pair in whitelist:
-            wl.append(LabelItem(pair))
+            wl = self.query_one("#whitelist")
+            wl.clear()
+            for pair in whitelist:
+                wl.append(LabelItem(pair))
+
+        wl.loading = False
 
     @on(ListView.Selected)
     def whitelist_pair_selected(self, event: ListView.Selected) -> None:
         event.stop()
+
         pair = str(event.item.label)
+        self.prev_chart_pair = pair
+
         bot_id = self._get_bot_id_from_client_list()
-        self.update_chart(bot_id, pair=pair)
+        if bot_id is not None and bot_id != 'Select.BLANK':
+            self.update_chart(bot_id, pair=pair)
+
+    @on(Collapsible.Toggled)
+    def toggle_collapsible(self, event: Collapsible.Toggled) -> None:
+        event.stop()
+        collap = event.collapsible
+
+        collap_children = collap.query().filter(".bg-static-default")
+
+        if collap.collapsed is False:
+            for child in collap_children:
+                child.loading = True
+
+        bot_id = self._get_bot_id_from_client_list()
+        if bot_id is not None and bot_id != 'Select.BLANK':
+            if collap.id in self.COLLAP_FUNC_MAP:
+                getattr(self, self.COLLAP_FUNC_MAP[collap.id])(bot_id)
+        else:
+            for child in collap_children:
+                child.loading = False
+
 
     def debug(self, msg):
         debuglog = self.query_one("#debug-log")
