@@ -1,26 +1,23 @@
 from datetime import datetime, timezone
 
+import pandas as pd
+import numpy as np
+
 from rich.table import Table
 from rich.text import Text
 
 from textual import work, on
 from textual.app import ComposeResult
 from textual.containers import Container
+from textual_plotext import PlotextPlot
 from textual.screen import Screen, ModalScreen
-from textual.worker import get_current_worker
-
 from textual.widgets import (
     Collapsible, DataTable, Digits,
     Footer, Header, Label, ListView, ListItem,
     Log, Markdown, Select, Static, TabbedContent,
     TabPane
 )
-
-import pandas as pd
-import numpy as np
-import subprocess
-
-from textual_plotext import PlotextPlot
+from textual.worker import get_current_worker
 
 import ftui.ftui_client as ftuic
 import ftui.ftui_helpers as fth
@@ -75,24 +72,32 @@ class DashboardScreen(Screen):
                     )
 
                 with Container(id="dash-collapsibles"):
-                    with Collapsible(title="All Open Trades", id="dsh-op-collap", collapsed=False):
+                    with Collapsible(title="All Open Trades",
+                                     id="dsh-op-collap",
+                                     collapsed=False):
                         yield Static(
                             id="all-open-trades-table",
                             classes="bg-static-default"
                         )
 
-                    with Collapsible(title="All Closed Trades", id="dsh-cl-collap", collapsed=True):
+                    with Collapsible(title="All Closed Trades",
+                                     id="dsh-cl-collap",
+                                     collapsed=True):
                         yield Static(
                             id="dash-closed-profit",
                             classes="bg-static-default"
                         )
 
-                    with Collapsible(title="Cumulative Profit", id="dsh-cp-collap", collapsed=True):
+                    with Collapsible(title="Cumulative Profit",
+                                     id="dsh-cp-collap",
+                                     collapsed=True):
                         yield PlotextPlot(
                             id="dash-cumprof-profit"
                         )
 
-                    # with Collapsible(title="Daily Trade Summary", id="dsh-dt-collap", collapsed=True):
+                    # with Collapsible(title="Daily Trade Summary",
+                    #                  id="dsh-dt-collap",
+                    #                  collapsed=True):
                     #     yield Static(
                     #         id="dash-daily-profit"
                     #     )
@@ -116,7 +121,6 @@ class DashboardScreen(Screen):
             5, self.update_per_five_sec
         )
         self.timers["5sec"] = update_five_sec_render
-
 
     async def update_per_sec(self):
         self.update_dashboard_all_bot_summary()
@@ -191,14 +195,13 @@ class DashboardScreen(Screen):
         client_dfs = self.app.client_dfs
 
         for n, cl in client_dict.items():
-            open_data = client_dfs[cl.name]['op_data'].copy() if cl.name in client_dfs and 'op_data' in client_dfs[cl.name] else pd.DataFrame()
-            closed_data = client_dfs[cl.name]['cl_data'].copy() if cl.name in client_dfs and 'cl_data' in client_dfs[cl.name] else pd.DataFrame()
+            open_data = fth.get_open_dataframe_data(cl, client_dfs)
+            closed_data = fth.get_closed_dataframe_data(cl, client_dfs)
 
             tot_profit = 0
             if not open_data.empty:
                 tot_profit = round(open_data['Profit'].sum(), 2)
 
-            #t = cl.get_total_profit()
             pcc = 0
             if not closed_data.empty:
                 pcc = round(closed_data['Profit'].sum(), 2)
@@ -241,9 +244,15 @@ class DashboardScreen(Screen):
             self.app.call_from_thread(dpsd.update, f"{dps}")
             self.app.call_from_thread(wpsd.update, f"{wps}")
             self.app.call_from_thread(mpsd.update, f"{mps}")
-            self.app.call_from_thread(ypsd.update, Text(f"{round(yesterday_profit, 2)}", justify="center"))
-            self.app.call_from_thread(lwpsd.update, Text(f"{round(last_week_profit, 2)}", justify="center"))
-            self.app.call_from_thread(lmpsd.update, Text(f"{round(last_month_profit, 2)}", justify="center"))
+            self.app.call_from_thread(ypsd.update,
+                                      Text(f"{round(yesterday_profit, 2)}",
+                                           justify="center"))
+            self.app.call_from_thread(lwpsd.update,
+                                      Text(f"{round(last_week_profit, 2)}",
+                                           justify="center"))
+            self.app.call_from_thread(lmpsd.update,
+                                      Text(f"{round(last_month_profit, 2)}",
+                                           justify="center"))
 
         fth.set_red_green_widget_colour(opsd, ops)
         fth.set_red_green_widget_colour(cpsd, cps)
@@ -259,7 +268,6 @@ class DashboardScreen(Screen):
         dpsd.loading = False
         wpsd.loading = False
         mpsd.loading = False
-
 
     @work(group="dash_all_open_worker", exclusive=True, thread=True)
     def update_dashboard_all_open_trades(self):
@@ -318,17 +326,15 @@ class DashboardScreen(Screen):
         all_losses = 0
 
         for n, cl in client_dict.items():
-            open_data = client_dfs[cl.name]['op_data'].copy() if cl.name in client_dfs and 'op_data' in client_dfs[cl.name] else pd.DataFrame()
-            closed_data = client_dfs[cl.name]['cl_data'].copy() if cl.name in client_dfs and 'cl_data' in client_dfs[cl.name] else pd.DataFrame()
+            open_data = fth.get_open_dataframe_data(cl, client_dfs)
+            closed_data = fth.get_closed_dataframe_data(cl, client_dfs)
 
             open_profit = 0
-            mean_prof = 0
             mean_prof_w = 0
             mean_prof_l = 0
             median_win = 0
             median_loss = 0
 
-            tp = 0
             tpw = []
             tpl = []
 
@@ -336,12 +342,8 @@ class DashboardScreen(Screen):
                 open_profit = round(open_data['Profit'].sum(), 2)
 
             if 'Profit' in closed_data.columns:
-                tp = closed_data['Profit'].sum()
-
                 tpw = closed_data.loc[closed_data['Profit'] >= 0, 'Profit']
                 tpl = closed_data.loc[closed_data['Profit'] < 0, 'Profit']
-
-                mean_prof = round(closed_data['Profit'].mean(), 2)
 
             if len(tpw) > 0:
                 mean_prof_w = round(tpw.mean(), 2)
@@ -371,17 +373,24 @@ class DashboardScreen(Screen):
             pcc = round(float(t['profit_closed_coin']), 2)
             # coin = stake_coin
             # coin = t['best_pair'].split('/')[1]
-            bot_start_date = datetime.strptime(f"{t['bot_start_date']}+00:00", self.app.TZFMT).date()
+            bot_start_date = datetime.strptime(
+                f"{t['bot_start_date']}+00:00", self.app.TZFMT
+            ).date()
 
             all_open_profit = all_open_profit + open_profit
             all_profit = all_profit + pcc
             all_wins = all_wins + t['winning_trades']
             all_losses = all_losses + t['losing_trades']
 
+            trade_cnt_str = (
+                f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}"
+                f"[white]/[magenta]{t['closed_trade_count']}"
+            )
+
             row_data.append((
                 f"{n}",
                 f"{bot_start_date}",
-                f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}[white]/[magenta]{t['closed_trade_count']}",
+                trade_cnt_str,
                 fth.red_or_green(round(open_profit, 2)),
                 f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
                 f"[cyan]{round(winrate, 1)}",
@@ -410,7 +419,6 @@ class DashboardScreen(Screen):
 
     @work(group="dash_chart_worker", exclusive=True, thread=True)
     def update_cumulative_profit_plot(self):
-        client_dict = self.app.client_dict
         client_dfs = self.app.client_dfs
 
         all_cum_data = pd.DataFrame()
@@ -428,37 +436,39 @@ class DashboardScreen(Screen):
                 dates = cplt.datetimes_to_string(all_cum_data.index)
 
                 cplt.plot(dates, all_cum_data['plot_cumprof'].values)
-                cplt.ylim(all_cum_data['plot_cumprof'].min() * 0.99, all_cum_data['plot_cumprof'].max() * 1.01)
+                cplt.ylim(all_cum_data['plot_cumprof'].min() * 0.99,
+                          all_cum_data['plot_cumprof'].max() * 1.01)
                 cplt.ylabel("Profit")
 
                 worker = get_current_worker()
                 if not worker.is_cancelled:
                     self.app.call_from_thread(chart_container.refresh)
 
+
 class MainBotScreen(Screen):
 
     timers = {}
 
     TAB_FUNC_MAP = {
-        ## tabs
-        "open-trades-tab":"update_open_trades_tab",
-        "closed-trades-tab":"update_closed_trades_tab",
-        "tag-summary-tab":"update_tag_summary_tab",
-        "perf-summary-tab":"update_performance_tab",
-        "config-tab":"update_config_tab",
-        "logs-tab":"update_logs_tab",
+        # tabs
+        "open-trades-tab": "update_open_trades_tab",
+        "closed-trades-tab": "update_closed_trades_tab",
+        "tag-summary-tab": "update_tag_summary_tab",
+        "perf-summary-tab": "update_performance_tab",
+        "config-tab": "update_config_tab",
+        "logs-tab": "update_logs_tab",
     }
 
     COLLAP_FUNC_MAP = {
-        ##collapsibles
-        "bot-chrt-collap":"update_chart_container",
+        # collapsibles
+        "bot-chrt-collap": "update_chart_container",
     }
 
     client_select_options = [("Select Bot Client...", "Select.BLANK")]
     prev_chart_pair = None
     chart_data = {}
 
-    ## LAYOUT
+    # LAYOUT
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Container(id="above-bot"):
@@ -474,7 +484,9 @@ class MainBotScreen(Screen):
                     )
 
                 with Container(id="bot-chart-container"):
-                    with Collapsible(title="Candlestick Chart", id="bot-chrt-collap", collapsed=False):
+                    with Collapsible(title="Candlestick Chart",
+                                     id="bot-chrt-collap",
+                                     collapsed=False):
                         yield ListView(
                             id="whitelist",
                             classes="bg-static-default"
@@ -517,7 +529,7 @@ class MainBotScreen(Screen):
                         )
 
                     with TabPane("Logs", id="logs-tab"):
-                        yield Log(id="log") #, wrap=True)
+                        yield Log(id="log")
                         # yield Container(id="sysinfo-panel")
 
                     with TabPane("Debug", id="debug-tab"):
@@ -525,8 +537,7 @@ class MainBotScreen(Screen):
 
         yield Footer()
 
-
-    ## MOUNT AND TIMERS
+    # MOUNT AND TIMERS
     def on_mount(self) -> None:
         self.update_select_options()
 
@@ -571,14 +582,13 @@ class MainBotScreen(Screen):
             self.update_chart(bot_id, pair=self.prev_chart_pair)
             self.update_whitelist(bot_id)
 
-
-    ## TAB EVENT STUFF
+    # TAB EVENT STUFF
     def _get_bot_id_from_client_list(self):
         try:
             sel = self.query_one("#client-select")
             bot_id = str(sel.value)
             return bot_id
-        except:
+        except Exception:
             return None
 
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
@@ -598,7 +608,7 @@ class MainBotScreen(Screen):
             cont = self.query_one("#right")
             active_tab_id = cont.get_child_by_type(TabbedContent).active
             return active_tab_id
-        except:
+        except Exception:
             return "open-trades-tab"
 
     def _get_tab(self, tab_id):
@@ -608,12 +618,9 @@ class MainBotScreen(Screen):
     def select_changed(self, event: Select.Changed) -> None:
         event.stop()
 
-        active_tab_id = self._get_active_tab_id()
         bot_id = str(event.value)
 
         if bot_id != 'Select.BLANK':
-            # self.update_select_options(bot_id=bot_id)
-
             self.query_one("#sel-bot-title").update(bot_id)
             self.update_trades_summary(bot_id)
 
@@ -664,15 +671,15 @@ class MainBotScreen(Screen):
 
         self.update_chart_container(bot_id)
 
-    ## bot trade summary
+    # bot trade summary
     @work(group="bot_summary_worker", exclusive=True, thread=True)
     def update_trades_summary(self, bot_id):
         client_dict = self.app.client_dict
         client_dfs = self.app.client_dfs
 
         cl = client_dict[bot_id]
-        open_data = client_dfs[cl.name]['op_data'].copy() if cl.name in client_dfs and 'op_data' in client_dfs[cl.name] else pd.DataFrame()
-        closed_data = client_dfs[cl.name]['cl_data'].copy() if cl.name in client_dfs and 'cl_data' in client_dfs[cl.name] else pd.DataFrame()
+        open_data = fth.get_open_dataframe_data(cl, client_dfs)
+        closed_data = fth.get_closed_dataframe_data(cl, client_dfs)
 
         self._render_trades_summary(cl, open_data, closed_data)
 
@@ -683,13 +690,11 @@ class MainBotScreen(Screen):
         ]
 
         open_profit = 0
-        mean_prof = 0
         mean_prof_w = 0
         mean_prof_l = 0
         median_win = 0
         median_loss = 0
 
-        tp = 0
         tpw = []
         tpl = []
 
@@ -699,12 +704,8 @@ class MainBotScreen(Screen):
             open_profit = round(open_data['Profit'].sum(), 2)
 
         if 'Profit' in closed_data.columns:
-            tp = round(closed_data['Profit'].sum(), 2)
-
             tpw = closed_data.loc[closed_data['Profit'] >= 0, 'Profit']
             tpl = closed_data.loc[closed_data['Profit'] < 0, 'Profit']
-
-            mean_prof = round(closed_data['Profit'].mean(), 2)
 
         if len(tpw) > 0:
             mean_prof_w = round(tpw.mean(), 2)
@@ -736,9 +737,14 @@ class MainBotScreen(Screen):
         # coin = t['best_pair'].split('/')[1]
         bot_start_date = datetime.strptime(f"{t['bot_start_date']}+00:00", self.app.TZFMT).date()
 
+        trade_cnt_str = (
+            f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}"
+            f"[white]/[magenta]{t['closed_trade_count']}"
+        )
+
         row_data.append((
             f"{bot_start_date}",
-            f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}[white]/[magenta]{t['closed_trade_count']}",
+            trade_cnt_str,
             fth.red_or_green(round(open_profit, 2)),
             f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
             f"[cyan]{round(winrate, 1)}",
@@ -758,37 +764,58 @@ class MainBotScreen(Screen):
 
         dt.loading = False
 
-
-    ## bot open trades tab
+    # bot open trades tab
     @work(group="bot_open_trades_worker", exclusive=True, thread=True)
     def update_open_trades_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
         cl = client_dict[bot_id]
-
-        tab = self._get_tab(tab_id)
         self._render_open_trade_summary(cl)
 
     def _render_open_trade_summary(self, ftuic):
-        client_dfs = self.app.client_dfs
-
         row_data = [
             # ("ID", "Pair", "Open Rate", "Current Rate", "Stop (%)", "Profit %", "Profit", "Dur.", "S/L", "Entry"),
         ]
 
+        current_time = datetime.now(tz=timezone.utc)
+
+        # get live data every second instead of 5 sec update dataframe
         open_trades = ftuic.get_open_trades()
 
-        current_time = datetime.now(tz=timezone.utc)
-        #if ftuic.name in client_dfs and 'op_data' in client_dfs[ftuic.name]:
-        #    trade_data = client_dfs[ftuic.name]['op_data']
-        #    for idx, v in trade_data.iterrows():
+        # if connection to the server is slow, use the dataframe instead
+        # if ftuic.name in client_dfs and 'op_data' in client_dfs[ftuic.name]:
+        #     trade_data = client_dfs[ftuic.name]['op_data']
+        #     for idx, v in trade_data.iterrows():
+
         for t in open_trades:
             ttime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
-            open_orders = t['has_open_orders'] if 'has_open_orders' in t else (t['open_order_id'] is not None)
-            pairstr = t['pair'] + ('*' if (open_orders and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
-            t_dir = "S" if t['is_short'] else "L"
-            stop_profit = round(((t['stop_loss_abs'] - t['open_rate']) / t['stop_loss_abs'])*100, 2)
+            open_orders = (
+                t['has_open_orders']
+                if 'has_open_orders' in t
+                else (t['open_order_id'] is not None)
+            )
 
+            suff = ''
+            if (open_orders and t['close_rate_requested'] is None):
+                suff = ' *'
+
+            if (t['close_rate_requested'] is not None):
+                suff = ' **'
+
+            pairstr = f"{t['pair']}{suff}"
+
+            t_dir = "S" if t['is_short'] else "L"
+            stop_profit = round(
+                (
+                    (t['stop_loss_abs'] - t['open_rate']) / t['stop_loss_abs']
+                ) * 100, 2
+            )
+
+            stp_txt = (
+                f"{t['stop_loss_abs']} [red]({stop_profit}%)"
+                if stop_profit <= 0
+                else f"{t['stop_loss_abs']} [green]({stop_profit}%)"
+            )
             row_data.append((
                 # f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
                 # f"[@click=show_pair_candlestick_dialog('{v['Pair']}', '{ftuic.name}')]{v['Pair']}[/]",
@@ -801,12 +828,12 @@ class MainBotScreen(Screen):
                 # f"{v['S/L']}",
                 # f"{v['Entry']}",
                 # f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
-
+                stp_txt,
                 f"{t['trade_id']}",
                 f"[@click=update_chart('{ftuic.name}', '{pairstr}')]{pairstr}[/]",
                 f"{t['open_rate']}",
                 f"{t['current_rate']}",
-                f"{t['stop_loss_abs']} [red]({stop_profit}%)" if stop_profit <= 0 else f"{t['stop_loss_abs']} [green]({stop_profit}%)",
+
                 fth.red_or_green(float(t['profit_pct'])),
                 fth.red_or_green(round(float(t['profit_abs']), 2)),
                 f"{str(current_time-ttime).split('.')[0]}",
@@ -822,15 +849,12 @@ class MainBotScreen(Screen):
             self.app.call_from_thread(dt.update, table)
         dt.loading = False
 
-
-    ## bot closed trades tab
+    # bot closed trades tab
     @work(group="bot_closed_trades_worker", exclusive=True, thread=True)
     def update_closed_trades_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
         cl = client_dict[bot_id]
-
-        tab = self._get_tab(tab_id)
         self._render_closed_trades_summary(cl)
 
     def _render_closed_trades_summary(self, ftuic):
@@ -862,16 +886,12 @@ class MainBotScreen(Screen):
             self.app.call_from_thread(dt.update, table)
         dt.loading = False
 
-
-    ## bot tag summary tab
+    # bot tag summary tab
     @work(group="bot_tag_summary_worker", exclusive=True, thread=True)
     def update_tag_summary_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
-        client_dfs = self.app.client_dfs
 
         cl = client_dict[bot_id]
-
-        tab = self._get_tab(tab_id)
         self._render_tag_summary(cl)
 
     def _render_tag_summary(self, ftuic):
@@ -881,19 +901,18 @@ class MainBotScreen(Screen):
             # ("Tag", "# Win", "# Loss", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"),
         ]
 
-        if ftuic.name in client_dfs and 'tag_data' in client_dfs[ftuic.name]:
-            tag_data = client_dfs[ftuic.name]['tag_data']
-            tag_data = tag_data.sort_values(by='Profit', ascending=False)
+        tag_data = fth.get_tag_dataframe_data(ftuic, client_dfs)
+        tag_data = tag_data.sort_values(by='Profit', ascending=False)
 
-            for idx, v in tag_data.iterrows():
-                row_data.append((
-                    f"{v['Tag']}",
-                    f"[green]{v['# Win']}/[red]{v['# Loss']}",
-                    f"{v['Avg Dur.']}",
-                    f"{v['Avg Win Dur.']}",
-                    f"{v['Avg Loss Dur.']}",
-                    fth.red_or_green(round(float(v['Profit']), 2), justify='right'),
-                ))
+        for idx, v in tag_data.iterrows():
+            row_data.append((
+                f"{v['Tag']}",
+                f"[green]{v['# Win']}/[red]{v['# Loss']}",
+                f"{v['Avg Dur.']}",
+                f"{v['Avg Win Dur.']}",
+                f"{v['Avg Loss Dur.']}",
+                fth.red_or_green(round(float(v['Profit']), 2), justify='right'),
+            ))
 
         dt = self.query_one("#tag-summary-table")
         table = fth.bot_tag_summary_table(row_data)
@@ -911,10 +930,8 @@ class MainBotScreen(Screen):
         chart_container = self.query_one("#bot-chart")
         cw, ch = chart_container.container_size
 
-        ## update chart
         cl = client_dict[bot_id]
-
-        open_data = client_dfs[cl.name]['op_data'].copy() if cl.name in client_dfs and 'op_data' in client_dfs[cl.name] else pd.DataFrame()
+        open_data = fth.get_open_dataframe_data(cl, client_dfs)
         if not open_data.empty:
             if pair is None:
                 if self.prev_chart_pair is None:
@@ -926,10 +943,10 @@ class MainBotScreen(Screen):
                 if self.prev_chart_pair is not None:
                     pair = self.prev_chart_pair
                 else:
-                    close_data = client_dfs[cl.name]['cl_data'].copy() if cl.name in client_dfs and 'cl_data' in client_dfs[cl.name] else pd.DataFrame()
+                    closed_data = fth.get_closed_dataframe_data(cl, client_dfs)
 
-                    if not close_data.empty:
-                        pair = close_data['Pair'].iloc[0]
+                    if not closed_data.empty:
+                        pair = closed_data['Pair'].iloc[0]
                     else:
                         pair = f"BTC/{cl.get_client_config()['stake_currency']}"
                     self.prev_chart_pair = pair
@@ -939,37 +956,45 @@ class MainBotScreen(Screen):
             chart_container.loading = True
             data = cl.get_pair_dataframe(pair, limit=min(max(round(cw/2), 50), 200))
             if data is not None and not data.empty:
-                self.chart_data[ckey] = data[["date","Open","Close","High","Low"]]
+                self.chart_data[ckey] = data[["date", "Open", "Close", "High", "Low"]]
                 self._render_chart(cl, pair, self.chart_data[ckey])
             else:
+                msg = (
+                    f"No data for {pair} [{cl.get_client_config()['timeframe']}] available. "
+                    f"Is the pair in the whitelist?"
+                )
                 self.notify(
-                    f"No candle data for {pair} [{cl.get_client_config()['timeframe']} available. Is the pair in the whitelist?",
+                    msg,
                     title=f"Error: [{pair}]",
                     severity="warning",
                 )
         else:
-            ## check if new data is available
+            # check if new data is available
             data = cl.get_pair_dataframe(pair, limit=1)
             if data is not None and not data.empty:
                 last_date = self.chart_data[ckey].iloc[-1]['date']
-                new_data = data[["date","Open","Close","High","Low"]].loc[data['date'] > last_date]
+                new_data = data[["date", "Open", "Close", "High", "Low"]].loc[
+                    data['date'] > last_date
+                ]
                 if not new_data.empty:
                     chart_container.loading = True
                     self.chart_data[ckey] = pd.concat([self.chart_data[ckey], new_data])
-                    self.chart_data[ckey].drop(self.chart_data[ckey].head(1).index,inplace=True)
+                    self.chart_data[ckey].drop(self.chart_data[ckey].head(1).index, inplace=True)
 
                 self._render_chart(cl, pair, self.chart_data[ckey])
 
             else:
+                msg = (
+                    f"No data for {pair} [{cl.get_client_config()['timeframe']}] available. "
+                    f"Is the pair in the whitelist?"
+                )
                 self.notify(
-                    f"No candle data for {pair} [{cl.get_client_config()['timeframe']}] available. Is the pair in the whitelist?",
+                    msg,
                     title=f"Error: [{pair}]",
                     severity="warning",
                 )
 
-
     def _render_chart(self, ftuic, pair, data, trades=None):
-        bot_id = ftuic.name
         chart_container = self.query_one("#bot-chart")
         cw, ch = chart_container.container_size
 
@@ -981,7 +1006,7 @@ class MainBotScreen(Screen):
 
             dfmt = "Y-m-d H:M:S"
             cplt.date_form(dfmt)
-            data.rename(columns = {'date':'Date'}, inplace = True)
+            data.rename(columns={'date': 'Date'}, inplace=True)
             data.set_index(pd.DatetimeIndex(data['Date']), inplace=True)
             data.index = data.index.tz_localize(None)
 
@@ -994,7 +1019,7 @@ class MainBotScreen(Screen):
             ymax = data['High'].max()
             yrange = ymax - ymin
 
-            ## stop plotext crashing if having to plot tiny values
+            # stop plotext crashing if having to plot tiny values
             ytick_labels = None
             if ymax < 0.00001 or ymin < 0.00001:
                 print("Scaling up by 10000")
@@ -1005,8 +1030,8 @@ class MainBotScreen(Screen):
                 ymin = data['Low'].min()
                 ymax = data['High'].max()
                 yrange = ymax - ymin
-                yticks = [i for i in np.linspace(ymin,ymax,5)]
-                ytick_labels = [f"{i/100000:.6f}" for i in np.linspace(ymin,ymax,5)]
+                yticks = [i for i in np.linspace(ymin, ymax, 5)]
+                ytick_labels = [f"{i/100000:.6f}" for i in np.linspace(ymin, ymax, 5)]
 
             y_per_box = yrange / ch
             cplt.ylim(ymin-y_per_box, ymax+y_per_box)
@@ -1029,15 +1054,12 @@ class MainBotScreen(Screen):
             self.app.call_from_thread(chart_container.refresh)
         chart_container.loading = False
 
-    ## bot performance tab
+    # bot performance tab
     @work(group="perf_summary_worker", exclusive=True, thread=True)
     def update_performance_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
-        client_dfs = self.app.client_dfs
 
         cl = client_dict[bot_id]
-
-        tab = self._get_tab(tab_id)
         self._render_performance_summary(cl)
 
     def _render_performance_summary(self, ftuic):
@@ -1047,17 +1069,16 @@ class MainBotScreen(Screen):
             # ("Pair", "# Trades", "Avg Profit %", "Total Profit"),
         ]
 
-        if ftuic.name in client_dfs and 'perf_data' in client_dfs[ftuic.name]:
-            perf_data = client_dfs[ftuic.name]['perf_data']
-            perf_data = perf_data.sort_values(by='Total Profit', ascending=False)
+        perf_data = fth.get_perf_dataframe_data(ftuic, client_dfs)
+        perf_data = perf_data.sort_values(by='Total Profit', ascending=False)
 
-            for idx, v in perf_data.iterrows():
-                row_data.append((
-                    f"{v['Pair']}",
-                    f"{v['# Trades']}",
-                    fth.red_or_green(float(v['Avg Profit %']), justify='right'),
-                    fth.red_or_green(float(v['Total Profit']), justify='right'),
-                ))
+        for idx, v in perf_data.iterrows():
+            row_data.append((
+                f"{v['Pair']}",
+                f"{v['# Trades']}",
+                fth.red_or_green(float(v['Avg Profit %']), justify='right'),
+                fth.red_or_green(float(v['Total Profit']), justify='right'),
+            ))
 
         dt = self.query_one("#perf-summary-table")
         table = fth.bot_perf_summary_table(row_data)
@@ -1067,8 +1088,7 @@ class MainBotScreen(Screen):
             self.app.call_from_thread(dt.update, table)
         dt.loading = False
 
-    ## bot config tab
-    # @work(group="config_worker", exclusive=True, thread=True)
+    # bot config tab
     def update_config_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
@@ -1139,18 +1159,18 @@ class MainBotScreen(Screen):
             for child in collap_children:
                 child.loading = False
 
-
     def debug(self, msg):
         debuglog = self.query_one("#debug-log")
         debuglog.write(msg)
 
-## custom widget to easily get label values from ListItems
+
+# custom widget to easily get label values from ListItems
 class LabelItem(ListItem):
     def __init__(self, label: str) -> None:
         super().__init__()
         self.label = label
 
-    def compose( self ) -> ComposeResult:
+    def compose(self) -> ComposeResult:
         yield Label(self.label)
 
 
@@ -1222,6 +1242,7 @@ class DataFrameScreen(BasicModal):
             dt.add_row(*[str(x) for x in row])
         return dt
 
+
 class TradeInfoScreen(BasicModal):
     trade_id: int = "None"
 
@@ -1237,8 +1258,7 @@ class TradeInfoScreen(BasicModal):
         yield Footer()
 
     def build_trade_info(self, trade_info):
-
-        close_rate= "-"
+        close_rate = "-"
         close_date = "-"
         close_profit = "-"
 
@@ -1246,33 +1266,40 @@ class TradeInfoScreen(BasicModal):
             # closed
             close_rate = trade_info['close_rate']
             close_date = trade_info['close_date']
-            close_profit = f"{trade_info['close_profit_abs']} ({trade_info['close_profit_pct']}%)"
+            close_profit = (
+                f"{trade_info['close_profit_abs']} ({trade_info['close_profit_pct']}%)"
+            )
 
         main_text = (
-            f"[b]Trade Id     : " + f"{self.trade_id}\n"
-            f"[b]Pair         : " + f"{trade_info['pair']}\n"
-            f"[b]Open Date    : " + f"{trade_info['open_date']}\n"
-            f"[b]Entry Tag    : " + f"{trade_info['enter_tag']}\n"
-            f"[b]Stake        : " + f"{trade_info['stake_amount']} {trade_info['quote_currency']}\n"
-            f"[b]Amount       : " + f"{trade_info['amount']}\n"
-            f"[b]Open Rate    : " + f"{trade_info['open_rate']}\n"
-            f"[b]Close Rate   : " + f"{close_rate}\n"
-            f"[b]Close Date   : " + f"{close_date}\n"
-            f"[b]Close Profit : " + f"{close_profit}\n"
+            f"[b]Trade Id     : {self.trade_id}\n"
+            f"[b]Pair         : {trade_info['pair']}\n"
+            f"[b]Open Date    : {trade_info['open_date']}\n"
+            f"[b]Entry Tag    : {trade_info['enter_tag']}\n"
+            "[b]Stake        : " + (
+                f"{trade_info['stake_amount']}"
+                f"{trade_info['quote_currency']}\n"
+            ),
+            f"[b]Amount       : {trade_info['amount']}\n"
+            f"[b]Open Rate    : {trade_info['open_rate']}\n"
+            f"[b]Close Rate   : {close_rate}\n"
+            f"[b]Close Date   : {close_date}\n"
+            f"[b]Close Profit : {close_profit}\n"
         )
 
         two_text = (
-            f"[b]Stoploss         :  {trade_info['stop_loss_pct']} ({trade_info['stop_loss_abs']})\n"
-            f"[b]Initial Stoploss :  {trade_info['initial_stop_loss_pct']} ({trade_info['initial_stop_loss_abs']})\n"
+            f"[b]Stoploss         :  "
+            f"{trade_info['stop_loss_pct']} ({trade_info['stop_loss_abs']})\n"
+            f"[b]Initial Stoploss :  "
+            f"{trade_info['initial_stop_loss_pct']} ({trade_info['initial_stop_loss_abs']})\n"
         )
 
-        three_text = (
-            # f"[b]Orders:  {self.trade_id}\n"
-            ", ".join(list(trade_info.keys()))
-        )
+        # three_text = (
+        #     # f"[b]Orders:  {self.trade_id}\n"
+        #     ", ".join(list(trade_info.keys()))
+        # )
 
         main = Static(main_text, classes="box", id="main-left")
         two = Static(two_text, classes="box", id="two")
-        three = Static(three_text, classes="box", id="three")
+        # three = Static(three_text, classes="box", id="three")
 
-        return main, two, three
+        return main, two

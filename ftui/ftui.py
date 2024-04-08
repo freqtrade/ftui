@@ -17,11 +17,13 @@ Run with:
 
 """
 
-import argparse, re, sys
+import argparse
+import logging
+import sys
+
 from datetime import datetime, timezone, timedelta
 
 import pandas as pd
-import numpy as np
 
 from rich.progress import Progress, BarColumn, TextColumn
 from rich.rule import Rule
@@ -30,6 +32,7 @@ from rich.table import Table
 
 from textual import work
 from textual.app import App
+from textual.logging import TextualHandler
 from textual.reactive import reactive, var
 
 import ftui.ftui_client as ftuic
@@ -44,9 +47,6 @@ from ftui.ftui_screens import (
 )
 
 urlre = r"^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
-
-import logging
-from textual.logging import TextualHandler
 
 logging.basicConfig(
     level="NOTSET",
@@ -99,7 +99,7 @@ class FreqText(App):
 
     loglimit = 100
 
-    ## setup screens
+    # setup screens
     dash_screen = DashboardScreen()
 
     bot_screen = MainBotScreen()
@@ -118,7 +118,6 @@ class FreqText(App):
 
     def set_client_dict(self, client_dict):
         self.client_dict = client_dict
-
 
     def on_mount(self) -> None:
         self.switch_mode("dashboard")
@@ -139,10 +138,15 @@ class FreqText(App):
                 otime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
                 ctime = datetime.now(tz=timezone.utc)
 
-                pairstr = t['pair'] # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
+                # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
+                pairstr = t['pair']
                 rpfta = round(float(t['profit_abs']), 2)
                 t_dir = "S" if t['is_short'] else "L"
-                stop_profit = round(((t['stop_loss_abs'] - t['open_rate']) / t['stop_loss_abs'])*100, 2)
+                stop_profit = round(
+                    (
+                        (t['stop_loss_abs'] - t['open_rate']) / t['stop_loss_abs']
+                    ) * 100, 2
+                )
 
                 row_data.append((
                     ftuic.name,
@@ -160,15 +164,24 @@ class FreqText(App):
 
         df = pd.DataFrame(
             row_data,
-            columns= [
-                "Bot", "ID", "Pair", "Open Rate", "Current Rate", "Stop %", "Profit %", "Profit", "Dur.", "S/L", "Entry"
+            columns=[
+                "Bot",
+                "ID",
+                "Pair",
+                "Open Rate",
+                "Current Rate",
+                "Stop %",
+                "Profit %",
+                "Profit",
+                "Dur.",
+                "S/L",
+                "Entry"
             ]
         )
 
         df = df.sort_values(by='ID', ascending=False)
 
         return df
-
 
     def _get_closed_trade_dataframe(self, ftuic):
         row_data = []
@@ -179,7 +192,8 @@ class FreqText(App):
                 otime = datetime.strptime(t['open_date'], self.DFMT).astimezone(tz=timezone.utc)
                 ctime = datetime.strptime(t['close_date'], self.DFMT).astimezone(tz=timezone.utc)
 
-                pairstr = t['pair'] # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
+                # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
+                pairstr = t['pair']
                 rpfta = round(float(t['profit_abs']), 2)
 
                 row_data.append((
@@ -197,13 +211,21 @@ class FreqText(App):
 
         df = pd.DataFrame(
             row_data,
-            columns= [
-                "Bot", "ID", "Pair", "Profit %", "Profit", "Open Date", "Close Date", "Dur.", "Entry", "Exit"
+            columns=[
+                "Bot",
+                "ID",
+                "Pair",
+                "Profit %",
+                "Profit",
+                "Open Date",
+                "Close Date",
+                "Dur.",
+                "Entry",
+                "Exit"
             ]
         )
 
         return df
-
 
     def _get_enter_tag_dataframe(self, ftuic):
         row_data = []
@@ -231,7 +253,13 @@ class FreqText(App):
             for t in trades:
                 profit = float(t['profit_abs'])
                 t_profit += profit
-                tdur = (datetime.strptime(t['close_date'], self.DFMT) - datetime.strptime(t['open_date'], self.DFMT)).total_seconds()
+                tdur = (
+                    datetime.strptime(
+                        t['close_date'], self.DFMT
+                    ) - datetime.strptime(
+                        t['open_date'], self.DFMT
+                    )
+                ).total_seconds()
                 tot_trade_dur = tot_trade_dur + tdur
 
                 if profit > 0:
@@ -243,14 +271,18 @@ class FreqText(App):
 
             t_profit = round(t_profit, 2)
 
+            avg_trade_dur = str(timedelta(
+                seconds=round(tot_trade_dur / len(trades), 0)
+            ))
 
-            wl = num_win
-            avg_trade_dur = str(timedelta(seconds = round(tot_trade_dur / len(trades), 0)))
             if num_win > 0:
-                avg_win_trade_dur = str(timedelta(seconds = round(win_trade_dur / num_win, 0)))
+                avg_win_trade_dur = str(timedelta(
+                    seconds=round(win_trade_dur / num_win, 0)
+                ))
             if num_loss > 0:
-                avg_loss_trade_dur = str(timedelta(seconds = round(loss_trade_dur / num_loss, 0)))
-                wl = num_win/num_loss
+                avg_loss_trade_dur = str(timedelta(
+                    seconds=round(loss_trade_dur / num_loss, 0)
+                ))
 
             row_data.append((
                 tag,
@@ -264,8 +296,14 @@ class FreqText(App):
 
         df = pd.DataFrame(
             row_data,
-            columns= [
-                "Tag", "# Win", "# Loss", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit"
+            columns=[
+                "Tag",
+                "# Win",
+                "# Loss",
+                "Avg Dur.",
+                "Avg Win Dur.",
+                "Avg Loss Dur.",
+                "Profit"
             ]
         )
 
@@ -277,7 +315,7 @@ class FreqText(App):
         data = ftuic.get_performance()
         if data is not None:
             for t in data:
-                pairstr = t['pair'] # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
+                pairstr = t['pair']
                 rpfta = round(float(t['profit_abs']), 2)
 
                 row_data.append((
@@ -289,13 +327,15 @@ class FreqText(App):
 
         df = pd.DataFrame(
             row_data,
-            columns= [
-                "Pair", "# Trades", "Avg Profit %", "Total Profit"
+            columns=[
+                "Pair",
+                "# Trades",
+                "Avg Profit %",
+                "Total Profit"
             ]
         )
 
         return df
-
 
     @work(group="df_updater_worker", exclusive=False, thread=True)
     def update_all_dfs(self):
@@ -320,11 +360,10 @@ class FreqText(App):
 
         self.client_dfs['all_closed'] = all_closed_df
 
-
     def watch_show_clients(self, show_clients: bool) -> None:
         self.set_class(show_clients, "-show-clients")
 
-    ## ACTIONS
+    # ACTIONS
     def action_switch_to_bot(self, bot_id) -> None:
         current_screen = self.screen
 
@@ -382,14 +421,18 @@ class FreqText(App):
 
         progress_cpu = Progress(
             "{task.description}",
-            BarColumn(bar_width=None, complete_style=Style(color="red"), finished_style=Style(color="red")),
+            BarColumn(bar_width=None,
+                      complete_style=Style(color="red"),
+                      finished_style=Style(color="red")),
             TextColumn("[red]{task.percentage:>3.0f}%"),
             expand=True,
         )
 
         progress_ram = Progress(
             "{task.description}",
-            BarColumn(bar_width=None, complete_style=Style(color="magenta"), finished_style=Style(color="magenta")),
+            BarColumn(bar_width=None,
+                      complete_style=Style(color="magenta"),
+                      finished_style=Style(color="magenta")),
             TextColumn("[magenta]{task.percentage:>3.0f}%", style=Style(color="magenta")),
             expand=True,
         )
@@ -407,7 +450,13 @@ class FreqText(App):
             job2 = progress_ram.add_task("[cyan] RAM")
             progress_ram.update(job2, completed=sysinfo['ram_pct'])
 
-            syslist.append(Rule(title=f"{ftuic.name} [{ftuic.url}:{ftuic.port}]", style=Style(color="cyan"), align="left"))
+            syslist.append(
+                Rule(
+                    title=f"{ftuic.name} [{ftuic.url}:{ftuic.port}]",
+                    style=Style(color="cyan"),
+                    align="left"
+                )
+            )
             syslist.append(progress_table)
 
         return syslist
@@ -419,54 +468,32 @@ def setup(args):
 
     print(__doc__)
 
-    if args.servers is not None:
-        if args.yaml:
-            indicators = args.indicators
+    if args.yaml:
+        for s in args.servers:
+            try:
+                ftui_client = ftuic.FTUIClient(
+                    name=s['name'],
+                    url=s['ip'],
+                    port=s['port'],
+                    username=s['username'],
+                    password=s['password'],
+                    config_path=config)
 
-            num_servers = len(args.servers)
-            for s in args.servers:
-                try:
-                    if config is not None:
-                        ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
-                    else:
-                        ftui_client = ftuic.FTUIClient(name=s['name'], url=s['ip'], port=s['port'], username=s['username'], password=s['password'])
-                    client_dict[ftui_client.name] = ftui_client
-                except Exception as e:
-                    raise RuntimeError('Cannot create freqtrade client') from e
+                client_dict[ftui_client.name] = ftui_client
+            except Exception as e:
+                raise RuntimeError('Cannot create freqtrade client') from e
+    else:
+        if config is not None:
+            try:
+                ftui_client = ftuic.FTUIClient(config_path=config)
+                client_dict[ftui_client.name] = ftui_client
+            except Exception as e:
+                raise RuntimeError('Cannot create freqtrade client') from e
         else:
-            slist = args.servers.split(",")
-            num_servers = len(slist)
-            for s in slist:
-                m = re.match(urlre, s)
-                if m:
-                    botname = m.group(1)
-                    suser = m.group(2)
-                    spass = m.group(3)
-                    url = m.group(4)
-                    port = m.group(5)
-
-                    if url is None or port is None:
-                        raise Exception("Cannot get URL and port from server option. Please use [name]user:pass@servername:port")
-
-                    try:
-                        if config is not None:
-                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass, config_path=config)
-                        else:
-                            ftui_client = ftuic.FTUIClient(name=botname, url=url, port=port, username=suser, password=spass)
-                        client_dict[ftui_client.name] = ftui_client
-                    except Exception as e:
-                        raise RuntimeError("Cannot create freqtrade client") from e
-                else:
-                    raise Exception("Cannot parse server option. Please use [name]user:pass@servername:port")
-    elif config is not None:
-        try:
-            ftui_client = ftuic.FTUIClient(config_path=config)
-            client_dict[ftui_client.name] = ftui_client
-        except Exception as e:
-            raise RuntimeError('Cannot create freqtrade client') from e
+            raise RuntimeError("No config or YAML file specified")
 
     if not client_dict:
-        raise Exception("No valid clients specified in config or --servers option")
+        raise Exception("No valid clients specified in --config or --yaml options")
 
     return client_dict
 
@@ -475,10 +502,25 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose debugging mode")
-    parser.add_argument("-c", "--config", nargs='?', help="Config to parse")
-    parser.add_argument("-y", "--yaml", nargs='?', help="Supply a YAML file instead of command line arguments.")
-    parser.add_argument("--debug", nargs="?", help="Debug mode")
+    parser.add_argument("-v",
+                        "--verbose",
+                        action="store_true",
+                        help="Verbose debugging mode")
+
+    parser.add_argument("-c",
+                        "--config",
+                        nargs='?',
+                        help="Config to parse")
+
+    parser.add_argument("-y",
+                        "--yaml",
+                        nargs='?',
+                        help="Supply a YAML file instead of command line arguments.")
+
+    parser.add_argument("--debug",
+                        nargs="?",
+                        help="Debug mode")
+
     args = parser.parse_args()
 
     if args.yaml is not None:
@@ -497,7 +539,7 @@ def main():
     all_closed_df = pd.DataFrame()
 
     for name, cl in client_dict.items():
-        print("", end = ".", flush=True)
+        print("", end=".", flush=True)
 
         op_data = ftapp._get_open_trade_dataframe(cl)
         cl_data = ftapp._get_closed_trade_dataframe(cl)

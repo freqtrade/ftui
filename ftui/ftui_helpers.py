@@ -1,14 +1,15 @@
-from datetime import datetime, timedelta
 import requests
 
-import numpy as np
+from datetime import datetime
+
 import pandas as pd
 
 from rich import box
 from rich.table import Table
 from rich.text import Text
 
-from textual import log
+import freqtrade_client.ft_rest_client as ftrc
+
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
@@ -16,11 +17,13 @@ class dotdict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
+
 def red_or_green(val, justify="left"):
     if val <= 0:
         return Text(str(f"{val}"), style="red", justify=justify)
     else:
         return Text(str(f"{val}"), style="green", justify=justify)
+
 
 def set_red_green_widget_colour(w, val):
     if val <= 0:
@@ -28,8 +31,31 @@ def set_red_green_widget_colour(w, val):
     else:
         w.styles.color = "green"
 
+
+def _get_dataframe_data_from_client(client, client_dfs, data_type):
+    if client.name in client_dfs and data_type in client_dfs[client.name]:
+        return client_dfs[client.name][data_type].copy()
+    return pd.DataFrame()
+
+
+def get_open_dataframe_data(client, client_dfs):
+    return _get_dataframe_data_from_client(client, client_dfs, 'op_data')
+
+
+def get_closed_dataframe_data(client, client_dfs):
+    return _get_dataframe_data_from_client(client, client_dfs, 'cl_data')
+
+
+def get_tag_dataframe_data(client, client_dfs):
+    return _get_dataframe_data_from_client(client, client_dfs, 'tag_data')
+
+
+def get_perf_dataframe_data(client, client_dfs):
+    return _get_dataframe_data_from_client(client, client_dfs, 'perf_data')
+
+
 # thanks @rextea!
-def fear_index(num_days_daily, retfear = {}):
+def fear_index(num_days_daily, retfear={}):
     default_resp = {
         "name": "Fear and Greed Index",
         "data": [
@@ -42,7 +68,9 @@ def fear_index(num_days_daily, retfear = {}):
     }
 
     if not retfear:
-        resp = requests.get(f'https://api.alternative.me/fng/?limit={num_days_daily}&date_format=kr')
+        resp = requests.get(
+            f'https://api.alternative.me/fng/?limit={num_days_daily}&date_format=kr'
+        )
     else:
         if str(datetime.today()) in retfear:
             return retfear[str(datetime.today())]
@@ -53,12 +81,12 @@ def fear_index(num_days_daily, retfear = {}):
         try:
             prev_resp = resp.json()
             df_gf = prev_resp['data']
-        except:
+        except Exception:
             prev_resp = default_resp
             df_gf = prev_resp['data']
     else:
         prev_resp = default_resp
-        df_gf = self.prev_resp['data']
+        df_gf = prev_resp['data']
 
     colourmap = {}
     colourmap['Extreme Fear'] = '[red]'
@@ -68,9 +96,12 @@ def fear_index(num_days_daily, retfear = {}):
     colourmap['Extreme Greed'] = '[green]'
 
     for i in df_gf:
-        retfear[i['timestamp']] = f"{colourmap[i['value_classification']]}{i['value_classification']}"
+        retfear[i['timestamp']] = (
+            f"{colourmap[i['value_classification']]}{i['value_classification']}"
+        )
 
     return retfear
+
 
 def dash_all_bot_summary(row_data) -> Table:
     table = Table(expand=True, box=box.SIMPLE_HEAD)
@@ -87,6 +118,7 @@ def dash_all_bot_summary(row_data) -> Table:
         )
 
     return table
+
 
 def daily_profit_table(client_dict, num_days_daily) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
@@ -106,9 +138,16 @@ def daily_profit_table(client_dict, num_days_daily) -> Table:
         t = cl.rest_client.daily(days=num_days_daily)
         for day in t['data']:
             if day['date'] not in dailydict.keys():
-                dailydict[day['date']] = [day['date'], f"{fear[day['date']]}", f"{round(float(day['abs_profit']),2)} {t['stake_currency']}", f"{day['trade_count']}"]
+                dailydict[day['date']] = [
+                    day['date'],
+                    f"{fear[day['date']]}",
+                    f"{round(float(day['abs_profit']),2)} {t['stake_currency']}",
+                    f"{day['trade_count']}"
+                ]
             else:
-                dailydict[day['date']].append(f"{round(float(day['abs_profit']),2)} {t['stake_currency']}")
+                dailydict[day['date']].append(
+                    f"{round(float(day['abs_profit']),2)} {t['stake_currency']}"
+                )
                 dailydict[day['date']].append(f"{day['trade_count']}")
 
     for day, vals in dailydict.items():
@@ -118,9 +157,8 @@ def daily_profit_table(client_dict, num_days_daily) -> Table:
 
     return table
 
-def tradeinfo(client_dict, trades_dict, indicators) -> Table:
-    yesterday = (datetime.now() - timedelta(days = 1)).strftime("%Y%m%d")
 
+def tradeinfo(client_dict, trades_dict, indicators) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     table.add_column("Pair", style="magenta", no_wrap=True, justify="left")
@@ -196,14 +234,13 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                                         *inds
                                     )
                                     # tc = get_trade_candle(pairdf, t['open_date'], t['pair'], "5m")
-                            except Exception as e:
-                                ## noone likes exceptions
-                                #print(e)
+                            except Exception:
+                                # noone likes exceptions
                                 pass
 
             closed_trades = trades_dict[n]
             do_stuff = True
-            if closed_trades is not None and do_stuff == True:
+            if closed_trades is not None and do_stuff:
                 t = closed_trades[0]
 
                 if t['pair'] not in shown_pairs:
@@ -254,14 +291,19 @@ def tradeinfo(client_dict, trades_dict, indicators) -> Table:
                             table.add_row(
                                 *inds
                             )
-                    except Exception as e:
-                        ## noone likes exceptions
-                        #print(e)
+                    except Exception:
+                        # noone likes exceptions
                         pass
 
     return table
 
-def dash_trades_summary(row_data, footer={"all_open_profit":"0", "num_wins_losses": "0/0", "all_total_profit": "0"}) -> Table:
+
+def dash_trades_summary(row_data,
+                        footer={
+                            "all_open_profit": "0",
+                            "num_wins_losses": "0/0",
+                            "all_total_profit": "0"
+                        }) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS, show_footer=True)
 
     # ("Bot", "# Trades", "Open Profit", "W/L", "Winrate", "Exp.", "Exp. Rate", "Med W", "Med L", "Tot. Profit")
@@ -334,6 +376,7 @@ def dash_closed_trades_table(row_data) -> Table:
 
     return table
 
+
 def dash_cumulative_profit_plot_data(trades, bot=None, pair=None):
     if trades.shape[0] > 0 and bot is not None:
         # Filter trades to one bot
@@ -372,6 +415,7 @@ def bot_trades_summary_table(row_data) -> Table:
         )
 
     return table
+
 
 def bot_open_trades_table(row_data) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
@@ -435,6 +479,7 @@ def bot_tag_summary_table(row_data) -> Table:
 
     return table
 
+
 def bot_perf_summary_table(row_data) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
@@ -450,6 +495,7 @@ def bot_perf_summary_table(row_data) -> Table:
         )
 
     return table
+
 
 def bot_config(config) -> str:
     config_text = f"""

@@ -16,6 +16,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("ftui_client")
 
+
 class FTUIClient():
 
     def __init__(self, name, url, port, username, password, config_path=None):
@@ -61,11 +62,21 @@ class FTUIClient():
             c = client.version()
             if c is not None:
                 if "detail" in c.keys() and (c["detail"] == 'Unauthorized'):
-                    raise Exception(f"Could not connect to bot [{self.url}:{self.port}]: Unauthorised")
+                    raise Exception(
+                        f"Could not connect to bot [{self.url}:{self.port}]: Unauthorised"
+                    )
             else:
-                raise Exception(f"Could not connect to bot [{self.url}:{self.port}]: Check that http://{self.url}:{self.port}/api/v1/ping works in a browser, and check any firewall settings.")
+                raise Exception(
+                    (
+                        f"Could not connect to bot [{self.url}:{self.port}]: "
+                        f"Check that http://{self.url}:{self.port}/api/v1/ping works in a browser "
+                        f"and check any firewall settings."
+                    )
+                )
         else:
-            raise Exception(f"Could not connect to bot [{self.url}:{self.port}]: Error creating client")
+            raise Exception(
+                f"Could not connect to bot [{self.url}:{self.port}]: Error creating client"
+            )
 
         self.rest_client = client
         current_config = self.get_client_config()
@@ -77,7 +88,12 @@ class FTUIClient():
 
         self.config = current_config
 
-        print(f"Setting up {self.name} version {c['version']} at {server_url}: {strategy} {bot_state} {runmode} {timeframe}")
+        print(
+            (
+                f"Setting up {self.name} version {c['version']} at {server_url}: "
+                f"{strategy} {bot_state} {runmode} {timeframe}"
+            )
+        )
         sleep(0.1)
 
     def get_client_config(self):
@@ -104,7 +120,14 @@ class FTUIClient():
 
         if cols and data:
             df = pd.DataFrame(data, columns=cols)
-            df.rename(columns = {'open':'Open', 'close':'Close', 'high':'High', 'low':'Low'}, inplace = True)
+            df.rename(
+                columns={
+                    'open': 'Open',
+                    'close': 'Close',
+                    'high': 'High',
+                    'low': 'Low'
+                },
+                inplace=True)
             return df
 
         return None
@@ -129,7 +152,7 @@ class FTUIClient():
                 trades = []
 
                 if m > 1:
-                    ## get last 500
+                    # get last 500
                     cltrades = cl.trades()
                     if cltrades is not None and 'trades' in cltrades:
                         clt = cltrades['trades']
@@ -261,9 +284,11 @@ class FTUIClient():
         t = cl.trade(trade_id)
         return t
 
+
 def main(args):
     if args.get("show"):
         sys.exit()
+
 
 if __name__ == "__main__":
     main()
