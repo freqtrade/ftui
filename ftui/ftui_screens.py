@@ -828,12 +828,11 @@ class MainBotScreen(Screen):
                 # f"{v['S/L']}",
                 # f"{v['Entry']}",
                 # f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
-                stp_txt,
                 f"{t['trade_id']}",
                 f"[@click=update_chart('{ftuic.name}', '{pairstr}')]{pairstr}[/]",
                 f"{t['open_rate']}",
                 f"{t['current_rate']}",
-
+                stp_txt,
                 fth.red_or_green(float(t['profit_pct'])),
                 fth.red_or_green(round(float(t['profit_abs']), 2)),
                 f"{str(current_time-ttime).split('.')[0]}",
