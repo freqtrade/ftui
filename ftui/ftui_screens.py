@@ -937,6 +937,8 @@ class MainBotScreen(Screen):
                     pair = open_data['Pair'].iloc[0]
                     self.prev_chart_pair = pair
                 pair = self.prev_chart_pair
+            else:
+                self.prev_chart_pair = pair
         else:
             if pair is None:
                 if self.prev_chart_pair is not None:
@@ -949,6 +951,8 @@ class MainBotScreen(Screen):
                     else:
                         pair = f"BTC/{cl.get_client_config()['stake_currency']}"
                     self.prev_chart_pair = pair
+            else:
+                self.prev_chart_pair = pair
 
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data:
