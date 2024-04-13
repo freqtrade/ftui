@@ -12,7 +12,7 @@ from textual.containers import Container
 from textual_plotext import PlotextPlot
 from textual.screen import Screen, ModalScreen
 from textual.widgets import (
-    Collapsible, DataTable, Digits,
+    Checkbox, Collapsible, DataTable, Digits,
     Footer, Header, Label, ListView, ListItem,
     Log, Markdown, Select, Static, TabbedContent,
     TabPane
@@ -1180,8 +1180,8 @@ class LabelItem(ListItem):
 class SettingsScreen(Screen):
     mkstr = "Settings:\n\n"
 
-    def set_args(self, yaml_args):
-        self.mkstr += str(yaml_args)
+#    def set_settings(self, yaml_args):
+#        self.mkstr += str(yaml_args)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -1192,9 +1192,31 @@ class SettingsScreen(Screen):
         with Container(id="parent-container"):
             with Container(id="right"):
                 yield Markdown("-- Settings")
-                yield Markdown(self.mkstr)
+                yield Container(id="settings")
 
         yield Footer()
+
+    def on_mount(self):
+        update_settings(self.app.settings)
+
+    def update_settings(self, s):
+        settings_container = self.query_one("#settings")
+        for setting in s:
+            if isinstance(s[setting], bool):
+                ## output checkbox
+                c = Checkbox(setting, s[setting])
+                settings_container.append(c)
+            elif isinstance(s[setting], str):
+                ## output textbox
+                c = Container(id=f"setting-{setting}")
+                c.append(Label(setting))
+                t = Input(s[setting])
+                c.append(t)
+            elif isinstance(s[setting], dict):
+                ## nested
+                print("bloop")
+
+
 
 
 class HelpScreen(Screen):

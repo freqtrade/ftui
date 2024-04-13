@@ -91,7 +91,10 @@ class FreqText(App):
     updating = False
     last_update = None
 
+    settings = {}
+
     client_dict = {}
+    clients_disabled = set()
     client_dfs = {}
 
     DFMT = "%Y-%m-%d %H:%M:%S"
@@ -105,7 +108,7 @@ class FreqText(App):
     bot_screen = MainBotScreen()
 
     settings_screen = SettingsScreen()
-    settings_screen.set_args(args)
+    # settings_screen.set_settings(settings)
 
     help_screen = HelpScreen()
 
@@ -118,6 +121,9 @@ class FreqText(App):
 
     def set_client_dict(self, client_dict):
         self.client_dict = client_dict
+
+    def set_settings(self, args):
+        self.settings = args
 
     def on_mount(self) -> None:
         self.switch_mode("dashboard")
@@ -342,21 +348,22 @@ class FreqText(App):
         all_closed_df = pd.DataFrame()
 
         for name, cl in self.client_dict.items():
-            op_data = self._get_open_trade_dataframe(cl)
-            cl_data = self._get_closed_trade_dataframe(cl)
-            tag_data = self._get_enter_tag_dataframe(cl)
-            perf_data = self._get_performance_dataframe(cl)
+            if name not in self.clients_disabled():
+                op_data = self._get_open_trade_dataframe(cl)
+                cl_data = self._get_closed_trade_dataframe(cl)
+                tag_data = self._get_enter_tag_dataframe(cl)
+                perf_data = self._get_performance_dataframe(cl)
 
-            if cl.name not in self.client_dfs:
-                self.client_dfs[name] = {}
+                if cl.name not in self.client_dfs:
+                    self.client_dfs[name] = {}
 
-            self.client_dfs[name]['op_data'] = op_data
-            self.client_dfs[name]['cl_data'] = cl_data
-            self.client_dfs[name]['tag_data'] = tag_data
-            self.client_dfs[name]['perf_data'] = perf_data
+                self.client_dfs[name]['op_data'] = op_data
+                self.client_dfs[name]['cl_data'] = cl_data
+                self.client_dfs[name]['tag_data'] = tag_data
+                self.client_dfs[name]['perf_data'] = perf_data
 
-            if cl_data is not None and not cl_data.empty:
-                all_closed_df = pd.concat([all_closed_df, cl_data])
+                if cl_data is not None and not cl_data.empty:
+                    all_closed_df = pd.concat([all_closed_df, cl_data])
 
         self.client_dfs['all_closed'] = all_closed_df
 
@@ -533,6 +540,7 @@ def main():
 
     ftapp = FreqText()
     ftapp.set_client_dict(client_dict)
+    ftapp.set_settings(args)
 
     print("\nStarting FTUI - preloading all dataframes...", end="")
 
