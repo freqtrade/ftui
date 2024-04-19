@@ -1,4 +1,5 @@
 import requests
+import webbrowser
 
 from datetime import datetime
 
@@ -497,10 +498,14 @@ def bot_perf_summary_table(row_data) -> Table:
     return table
 
 
-def bot_config(config) -> str:
+def bot_config(client) -> str:
+    config = client.get_client_config()
+
     config_text = f"""
     [italic]Bot Info[/italic]
     [bold]Bot Name            :[/bold] {config['bot_name']}
+    [bold]URL                 :[/bold] [@click=app.open_link('{client.url}:{client.port}')]{client.url}:{client.port}[/]
+
     [bold]Version             :[/bold] {config['version']}
     [bold]Runmode             :[/bold] {config['runmode']}
     [bold]Force Entry         :[/bold] {config['force_entry_enable']}

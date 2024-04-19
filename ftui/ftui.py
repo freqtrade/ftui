@@ -82,10 +82,6 @@ class FreqText(App):
         ("q", "quit", "Quit"),
     ]
 
-    # SCREENS = {"c_candles": CandlestickScreen(),
-    #            "i_tradeinfo": TradeInfoScreen(),
-    #            "c_profit": ProfitChartPanel()}
-
     show_clients = var(True)
     active_tab = reactive("open-trades-tab")
     updating = False
@@ -402,11 +398,18 @@ class FreqText(App):
     def action_update_chart(self, bot_id, pair) -> None:
         self.MODES['bots'].update_chart(bot_id, pair)
 
-    def action_show_trade_info_dialog(self, trade_id, cl_name):
+    def action_show_trade_info_dialog(self, trade_id, cl_name) -> None:
         tis = TradeInfoScreen()
         tis.trade_id = trade_id
         tis.client = self.client_dict[cl_name]
         self.push_screen(tis)
+
+    def action_open_link(self, link) -> None:
+        try:
+            webbrowser.open(link, new=2)
+        except Exception as e:
+            print(f"Error opening link: {e}")
+            pass
 
     # def update_sysinfo_header(self, bot_id):
     #     cl = client_dict[bot_id]
