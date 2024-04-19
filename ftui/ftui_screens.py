@@ -1099,7 +1099,7 @@ class MainBotScreen(Screen):
             cl = client_dict[bot_id]
 
             dt = self.query_one("#config-summary")
-            c = fth.bot_config(cl.get_client_config())
+            c = fth.bot_config(cl)
             dt.update(c)
 
     @work(group="bot_logs_worker", exclusive=False, thread=True)
