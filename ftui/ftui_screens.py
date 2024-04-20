@@ -3,17 +3,19 @@ from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 
+from rich.color import Color
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
 from textual import work, on
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Horizontal, Vertical
 from textual_plotext import PlotextPlot
 from textual.screen import Screen, ModalScreen
 from textual.widgets import (
-    Checkbox, Collapsible, DataTable, Digits,
-    Footer, Header, Label, ListView, ListItem,
+    Button, Checkbox, Collapsible, DataTable, Digits,
+    Footer, Header, Input, Label, ListView, ListItem,
     Log, Markdown, Select, Static, TabbedContent,
     TabPane
 )
@@ -140,15 +142,23 @@ class DashboardScreen(Screen):
         if dsh_cp_collap.collapsed is False:
             self.update_cumulative_profit_plot()
 
-    def _render_open_trade_data(self, data):
+    def _render_open_trade_data(self, data, trading_mode="spot"):
         row_data = []
 
         for idx, v in data.iterrows():
             bot_name = v['Bot']
-            row_data.append((
+
+            render_data = (
                 f"[@click=app.switch_to_bot('{bot_name}')]{bot_name}[/]",
                 f"{v['ID']}",
                 f"{v['Pair']}",
+                f"{v['Stake']}",
+            )
+
+            if trading_mode != "spot":
+                render_data = render_data + (f"{v['Leverage']}")
+
+            render_data = render_data + (
                 f"{v['Open Rate']}",
                 f"{v['Current Rate']}",
                 fth.red_or_green(float(v['Stop %'])),
@@ -157,7 +167,9 @@ class DashboardScreen(Screen):
                 str(v["Dur."]).split('.')[0].replace('0 days ', ''),
                 f"{v['S/L']}",
                 f"{v['Entry']}",
-            ))
+            )
+
+            row_data.append(render_data)
 
         return row_data
 
@@ -284,7 +296,10 @@ class DashboardScreen(Screen):
         row_data = self._render_open_trade_data(all_open_df)
 
         dt = self.query_one("#all-open-trades-table")
-        table = fth.dash_open_trades_table(row_data)
+        table = fth.dash_open_trades_table(
+            row_data,
+            trading_mode=cl.get_client_config().get('trading_mode')
+        )
 
         worker = get_current_worker()
         if not worker.is_cancelled:
@@ -816,7 +831,8 @@ class MainBotScreen(Screen):
                 if stop_profit <= 0
                 else f"{t['stop_loss_abs']} [green]({stop_profit}%)"
             )
-            row_data.append((
+
+            render_data = (
                 # f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
                 # f"[@click=show_pair_candlestick_dialog('{v['Pair']}', '{ftuic.name}')]{v['Pair']}[/]",
                 # f"{v['Open Rate']}",
@@ -827,21 +843,32 @@ class MainBotScreen(Screen):
                 # str(v["Dur."]).split('.')[0].replace('0 days ', ''),
                 # f"{v['S/L']}",
                 # f"{v['Entry']}",
-                # f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
-                f"{t['trade_id']}",
+                f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
                 f"[@click=update_chart('{ftuic.name}', '{pairstr}')]{pairstr}[/]",
+                f"{t['stake_amount']}",
+            )
+
+            if ftuic.get_client_config().get('trading_mode') != "spot":
+                render_data = render_data + (f"{t['leverage']}")
+
+            render_data = render_data + (
                 f"{t['open_rate']}",
                 f"{t['current_rate']}",
                 stp_txt,
-                fth.red_or_green(float(t['profit_pct'])),
-                fth.red_or_green(round(float(t['profit_abs']), 2)),
+                fth.red_or_green(float(t['profit_pct']), justify='right'),
+                fth.red_or_green(round(float(t['profit_abs']), 2), justify='right'),
                 f"{str(current_time-ttime).split('.')[0]}",
                 f"{t_dir}",
                 f"{t['enter_tag']}" if "enter_tag" in t else "",
-            ))
+            )
+
+            row_data.append(render_data)
 
         dt = self.query_one("#open-trades-table")
-        table = fth.bot_open_trades_table(row_data)
+        table = fth.bot_open_trades_table(
+            row_data,
+            trading_mode=ftuic.get_client_config().get('trading_mode')
+        )
 
         worker = get_current_worker()
         if not worker.is_cancelled:
@@ -866,19 +893,35 @@ class MainBotScreen(Screen):
         if ftuic.name in client_dfs and 'cl_data' in client_dfs[ftuic.name]:
             trade_data = client_dfs[ftuic.name]['cl_data']
             for idx, v in trade_data.iterrows():
-                row_data.append((
+                render_data = (
+                    # Text.styled(str(v['ID']), Style(
+                    #     meta={"@click": f"show_trade_info_dialog('{str(v['ID'])}', '{ftuic.name}')"},
+                    #     color=Color("dark_goldenrod", 0)
+                    # )),
                     f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
                     f"[@click=update_chart('{ftuic.name}', '{v['Pair']}')]{v['Pair']}[/]",
+                    f"{v['Stake Amount']}",
+                )
+
+                if ftuic.get_client_config().get('trading_mode') != "spot":
+                    render_data = render_data + (f"{v['Leverage']}")
+
+                render_data = render_data + (
                     fth.red_or_green(float(v['Profit %']), justify='right'),
                     fth.red_or_green(float(v['Profit']), justify='right'),
                     f"[cyan]{str(v['Open Date']).split('+')[0]}",
                     str(v['Dur.']).split('.')[0].replace('0 days ', ''),
                     f"{v['Entry']}",
                     f"{v['Exit']}",
-                ))
+                )
+
+                row_data.append(render_data)
 
         dt = self.query_one("#closed-trades-table")
-        table = fth.bot_closed_trades_table(row_data)
+        table = fth.bot_closed_trades_table(
+            row_data,
+            trading_mode=ftuic.get_client_config().get('trading_mode')
+        )
 
         worker = get_current_worker()
         if not worker.is_cancelled:
@@ -922,7 +965,7 @@ class MainBotScreen(Screen):
         dt.loading = False
 
     @work(group="bot_chart_worker", exclusive=True, thread=True)
-    def update_chart(self, bot_id, pair=None):
+    def update_chart(self, bot_id, pair=None, refresh=False):
         client_dict = self.app.client_dict
         client_dfs = self.app.client_dfs
 
@@ -955,7 +998,7 @@ class MainBotScreen(Screen):
                 self.prev_chart_pair = pair
 
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
-        if ckey not in self.chart_data:
+        if ckey not in self.chart_data or refresh:
             chart_container.loading = True
             data = cl.get_pair_dataframe(pair, limit=min(max(round(cw/2), 50), 200))
             if data is not None and not data.empty:
@@ -1011,7 +1054,11 @@ class MainBotScreen(Screen):
             cplt.date_form(dfmt)
             data.rename(columns={'date': 'Date'}, inplace=True)
             data.set_index(pd.DatetimeIndex(data['Date']), inplace=True)
+            data.drop(columns=['Date'], inplace=True)
             data.index = data.index.tz_localize(None)
+
+            min_date = data.index.min()
+            max_date = data.index.max()
 
             dates = cplt.datetimes_to_string(data.index)
 
@@ -1043,16 +1090,38 @@ class MainBotScreen(Screen):
 
             cplt.candlestick(dates, data)
 
-            # if trades is not None and not trades.empty:
-            #     o_events = []
-            #     c_events = []
-            #     for t in trades:
-            #         o_events.append(t['open_rate'])
-            #         if "close_rate" in t and t['close_rate'] is not None:
-            #             c_events.append(t['close_rate'])
+            # scatter
+            client_dfs = self.app.client_dfs
+            open_data = fth.get_open_dataframe_data(ftuic, client_dfs)
+            open_data = open_data[open_data['Pair'] == pair]
+            closed_data = fth.get_closed_dataframe_data(ftuic, client_dfs)
+            closed_data = closed_data[closed_data['Pair'] == pair]
 
-            #     cplt.scatter(dates, o_events, marker='o', color='cyan')
-            #     cplt.scatter(dates, c_events, marker='x', color='yellow')
+            all_trades = pd.concat([open_data, closed_data])
+
+            if all_trades is not None and not all_trades.empty:
+                all_trades['Open Date'] = pd.to_datetime(all_trades['Open Date']).dt.tz_localize(None)
+                all_trades['Close Date'] = pd.to_datetime(all_trades['Close Date']).dt.tz_localize(None)
+
+                o_events = []
+                o_dates = []
+                c_events = []
+                c_dates = []
+                for idx, t in all_trades.iterrows():
+                    odate = t['Open Date']
+
+                    if odate < max_date:
+                        if odate> min_date:
+                            o_events.append(t['Open Rate'])
+                            o_dates.append(odate)
+
+                    if "Close Rate" in t and t['Close Rate'] is not None and not pd.isna(t['Close Rate']):
+                        if t['Close Date'] > min_date:
+                            c_events.append(t['Close Rate'])
+                            c_dates.append(t['Close Date'])
+
+                cplt.scatter(cplt.datetimes_to_string(o_dates), o_events, marker='o', color='cyan')
+                cplt.scatter(cplt.datetimes_to_string(c_dates), c_events, marker='x', color='yellow')
 
             self.app.call_from_thread(chart_container.refresh)
         chart_container.loading = False
@@ -1178,48 +1247,64 @@ class LabelItem(ListItem):
 
 
 class SettingsScreen(Screen):
-    mkstr = "Settings:\n\n"
 
-#    def set_settings(self, yaml_args):
-#        self.mkstr += str(yaml_args)
+    timers = {}
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
-        with Container(id="above"):
+        with Container(id="settings-above"):
             yield Static("FTUI Settings")
+            yield Button("Save", id="save-settings-button", variant="success")
 
         with Container(id="parent-container"):
             with Container(id="right"):
-                yield Markdown("-- Settings")
-                yield Container(id="settings")
+                with Container(id="settings-left"):
+                    yield Label("Server List")
+                with Container(id="settings-right"):
+                    yield Label("General Config")
 
         yield Footer()
 
     def on_mount(self):
-        update_settings(self.app.settings)
+        self.update_settings(self.app.settings)
 
     def update_settings(self, s):
-        settings_container = self.query_one("#settings")
-        for setting in s:
-            if isinstance(s[setting], bool):
-                ## output checkbox
-                c = Checkbox(setting, s[setting])
-                settings_container.append(c)
-            elif isinstance(s[setting], str):
-                ## output textbox
-                c = Container(id=f"setting-{setting}")
-                c.append(Label(setting))
-                t = Input(s[setting])
-                c.append(t)
-            elif isinstance(s[setting], dict):
-                ## nested
-                print("bloop")
+        settings_left = self.query_one("#settings-left")
+        settings_right = self.query_one("#settings-right")
 
+        for setting in s:
+            if setting != "yaml":
+                if isinstance(s[setting], bool):
+                    # output checkbox
+                    c = Checkbox(setting, s[setting])
+                    settings_right.mount(c)
+                elif isinstance(s[setting], str):
+                    # output textbox
+                    c = Horizontal(id=f"settings-{setting}")
+                    c.mount(Label(setting), Input(s[setting]))
+                    settings_right.mount(c)
+                elif isinstance(s[setting], dict):
+                    # nested
+                    print("bloop")
+                elif isinstance(s[setting], list):
+                    if setting == "servers":
+                        # output server list
+                        c = Container(id=f"settings-{setting}")
+                        # c.mount(Label("Server List"))
+                        for server in s[setting]:
+                            t = Checkbox(
+                                f"{server['name']} [{server['ip']}:{server['port']}]",
+                                server['enabled']
+                            )
+                            c.mount(t)
+                        settings_left.mount(c)
 
 
 
 class HelpScreen(Screen):
+
+    timers = {}
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -1273,58 +1358,53 @@ class TradeInfoScreen(BasicModal):
 
     def compose(self) -> ComposeResult:
         trade_info = self.client.get_trade_info(self.trade_id)
-        main, two, three = self.build_trade_info(trade_info)
-        yield Container(
-            main,
-            two,
-            three,
-            id="info-dialog",
-        )
-        yield Footer()
+        main, two = self.build_trade_info(trade_info)
+        with Container(main, two, id="info-dialog"):
+            with Container(id="trade-info-footer"):
+                yield Static("[Esc] to close")
+
 
     def build_trade_info(self, trade_info):
-        close_rate = "-"
-        close_date = "-"
-        close_profit = "-"
-
-        if trade_info['close_profit_abs'] is not None:
-            # closed
-            close_rate = trade_info['close_rate']
-            close_date = trade_info['close_date']
-            close_profit = (
-                f"{trade_info['close_profit_abs']} ({trade_info['close_profit_pct']}%)"
-            )
 
         main_text = (
             f"[b]Trade Id     : {self.trade_id}\n"
             f"[b]Pair         : {trade_info['pair']}\n"
             f"[b]Open Date    : {trade_info['open_date']}\n"
             f"[b]Entry Tag    : {trade_info['enter_tag']}\n"
-            "[b]Stake        : " + (
-                f"{trade_info['stake_amount']}"
+            "[b]Stake        : "
+                f"{trade_info['stake_amount']} "
                 f"{trade_info['quote_currency']}\n"
-            ),
             f"[b]Amount       : {trade_info['amount']}\n"
             f"[b]Open Rate    : {trade_info['open_rate']}\n"
-            f"[b]Close Rate   : {close_rate}\n"
-            f"[b]Close Date   : {close_date}\n"
-            f"[b]Close Profit : {close_profit}\n"
         )
 
+        if trade_info['close_profit_abs'] is not None:
+            close_rate = trade_info['close_rate']
+            close_date = trade_info['close_date']
+            close_profit = (
+                f"{trade_info['close_profit_abs']} ({trade_info['close_profit_pct']}%)"
+            )
+
+            main_text += (
+                f"[b]Close Rate   : {close_rate}\n"
+                f"[b]Close Date   : {close_date}\n"
+                f"[b]Close Profit : {close_profit}\n"
+            )
+
         two_text = (
-            f"[b]Stoploss         :  "
+            f"[b]Stoploss         : "
             f"{trade_info['stop_loss_pct']} ({trade_info['stop_loss_abs']})\n"
-            f"[b]Initial Stoploss :  "
+            f"[b]Initial Stoploss : "
             f"{trade_info['initial_stop_loss_pct']} ({trade_info['initial_stop_loss_abs']})\n"
         )
 
-        # three_text = (
+        # three_text = (7
         #     # f"[b]Orders:  {self.trade_id}\n"
         #     ", ".join(list(trade_info.keys()))
         # )
 
-        main = Static(main_text, classes="box", id="main-left")
-        two = Static(two_text, classes="box", id="two")
+        main = Static(main_text, classes="box", id="trade-info-left")
+        two = Static(two_text, classes="box", id="trade-info-right")
         # three = Static(three_text, classes="box", id="three")
 
         return main, two

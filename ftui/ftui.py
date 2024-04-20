@@ -137,7 +137,7 @@ class FreqText(App):
         trades = ftuic.get_open_trades()
         if trades is not None:
             for t in trades:
-                otime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
+                otime = datetime.strptime(f"{t['open_date']}", self.app.DFMT).astimezone(tz=timezone.utc)
                 ctime = datetime.now(tz=timezone.utc)
 
                 # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
@@ -162,6 +162,9 @@ class FreqText(App):
                     ctime-otime,
                     t_dir,
                     t['enter_tag'],
+                    t['open_date'],
+                    t['stake_amount'],
+                    t['leverage']
                 ))
 
         df = pd.DataFrame(
@@ -177,7 +180,10 @@ class FreqText(App):
                 "Profit",
                 "Dur.",
                 "S/L",
-                "Entry"
+                "Entry",
+                "Open Date",
+                "Stake Amount",
+                "Leverage"
             ]
         )
 
@@ -209,6 +215,10 @@ class FreqText(App):
                     ctime-otime,
                     t['enter_tag'],
                     t['exit_reason'],
+                    t['open_rate'],
+                    t['close_rate'],
+                    t['stake_amount'],
+                    t['leverage']
                 ))
 
         df = pd.DataFrame(
@@ -223,7 +233,11 @@ class FreqText(App):
                 "Close Date",
                 "Dur.",
                 "Entry",
-                "Exit"
+                "Exit",
+                "Open Rate",
+                "Close Rate",
+                "Stake Amount",
+                "Leverage"
             ]
         )
 
@@ -344,7 +358,7 @@ class FreqText(App):
         all_closed_df = pd.DataFrame()
 
         for name, cl in self.client_dict.items():
-            if name not in self.clients_disabled():
+            if name not in self.clients_disabled:
                 op_data = self._get_open_trade_dataframe(cl)
                 cl_data = self._get_closed_trade_dataframe(cl)
                 tag_data = self._get_enter_tag_dataframe(cl)
@@ -397,6 +411,9 @@ class FreqText(App):
 
     def action_update_chart(self, bot_id, pair) -> None:
         self.MODES['bots'].update_chart(bot_id, pair)
+
+    def action_force_chart_refresh(self, bot_id, pair) -> None:
+        self.MODES['bots'].update_chart(bot_id, pair, refresh=True)
 
     def action_show_trade_info_dialog(self, trade_id, cl_name) -> None:
         tis = TradeInfoScreen()

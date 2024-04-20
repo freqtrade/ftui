@@ -159,18 +159,6 @@ ListView Label {
     height: 5;
 }
 
-#left {
-    display: none;
-    background: $boost;
-    scrollbar-gutter: stable;
-    overflow: auto;
-    color: auto;
-    width: 25%;
-    height: 100%;
-    dock: left;
-    border: blue;
-}
-
 #right {
     overflow: auto;
     height: 100%;
@@ -183,6 +171,10 @@ ListView Label {
     margin-left: 1;
     margin-right: 1;
     margin-top: 1;
+}
+
+#closed-trades-table {
+    link-color: goldenrod;
 }
 
 #bot-chart-container {
@@ -218,58 +210,71 @@ ListView Label {
     scrollbar-gutter: stable;
 }
 
-
-#top-right {
-    height: 100%;
-    /* background: $panel; */
-    border: mediumvioletred;
-    /* overflow: auto;
-    width: auto; */
+#settings-left {
+    dock: left;
+    width: 30%;
+    height: auto;
+    overflow: auto;
+    scrollbar-gutter: stable;
 }
 
-#top-right > Static {
-    /* width: auto; */
-    height: 100%;
-    margin-right: 1;
-    background: $boost;
+#settings-left Label {
+    padding-left: 1;
+    padding-bottom: 1;
 }
 
-#bottom-right {
-    height: 100%;
-    layout: grid;
-    grid-size: 3;
-    grid-columns: 1fr;
-    grid-rows: 1fr;
-    grid-gutter: 1;
-    background: $panel;
-    border: greenyellow;
+#settings-right {
+    width: 70%;
+    overflow: auto;
+    border-left: white;
 }
 
-#bottom-right-final {
-    column-span: 2;
-}
-
-#bottom-right > Static {
-    height: 100%;
-    background: $boost;
-}
-
-#summary-table {
+#settings-right Container {
     width: 100%;
 }
 
-FreqText.-show-clients #left {
-    display: block;
-    max-width: 50%;
+#settings-right Label {
+    padding-left: 1;
+    padding-bottom: 1;
 }
 
-#info-view {
-    overflow: auto scroll;
-    min-width: 100%;
+#settings-right Horizontal Label {
+    padding-left: 1;
+    padding-top: 1;
+}
+
+#settings-above {
+    layout: horizontal;
+    height: 5;
+    border: green;
+}
+
+#settings-above Static {
+    padding-top: 1;
+}
+
+#save-settings-button {
+    dock: right;
+    height: 3;
 }
 
 #info {
     width: auto;
+}
+
+#trade-info-left {
+    dock: left;
+    width: 50%;
+}
+
+#trade-info-right {
+    dock: right;
+    width: 50%;
+}
+
+#trade-info-footer {
+    dock: bottom;
+    height: 1;
 }
 
 #info-dialog {
@@ -292,26 +297,7 @@ FreqText.-show-clients #left {
     padding: 1 2;
 }
 
-#chart-dialog {
-    /* height: 80%;
-    width: 80%; */
-    /* background: $panel 50%; */
-    color: $text;
-    border: rgba(255, 255, 255, 0.3);
-}
-
-
-#plot-area {
-    height: 100%;
-    width: 100%;
-    border: round red;
-}
-
 .full-width {
     width: 100%;
     border: round #444;
-}
-
-.center-align {
-    align: center middle;
 }

@@ -332,13 +332,18 @@ def dash_trades_summary(row_data,
     return table
 
 
-def dash_open_trades_table(row_data) -> Table:
+def dash_open_trades_table(row_data, trading_mode="spot") -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("Bot", "ID", "Pair", "Open Rate", "Current Rate", "Stop %", "Profit %", "Profit", "Dur.", "S/L", "Entry")
     table.add_column("Bot", style="yellow", no_wrap=True)
     table.add_column("ID", style="white", no_wrap=True)
     table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Stake", justify="left")
+
+    if trading_mode != "spot":
+        table.add_column("Leverage", justify="left")
+
     table.add_column("Open Rate", style="white", no_wrap=True)
     table.add_column("Rate", style="white", no_wrap=True)
     table.add_column("Stop %", no_wrap=True)
@@ -418,12 +423,17 @@ def bot_trades_summary_table(row_data) -> Table:
     return table
 
 
-def bot_open_trades_table(row_data) -> Table:
+def bot_open_trades_table(row_data, trading_mode="spot") -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("ID", "Pair", "Open Rate", "Current Rate", "Stop %", "Profit %", "Profit", "Dur.", "S/L", "Entry")
     table.add_column("ID", style="white", no_wrap=True)
     table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Stake", justify="left")
+
+    if trading_mode != "spot":
+        table.add_column("Leverage", justify="left")
+
     table.add_column("Open Rate", style="white", no_wrap=True)
     table.add_column("Rate", style="white", no_wrap=True)
     table.add_column("Stop %", no_wrap=True)
@@ -441,12 +451,17 @@ def bot_open_trades_table(row_data) -> Table:
     return table
 
 
-def bot_closed_trades_table(row_data) -> Table:
+def bot_closed_trades_table(row_data, trading_mode="spot") -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("ID", "Pair", "Profit %", "Profit", "Dur.", "Exit")
     table.add_column("ID", style="white", no_wrap=True)
     table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Stake", justify="left")
+
+    if trading_mode != "spot":
+        table.add_column("Leverage", justify="left")
+
     table.add_column("Profit %", justify="right")
     table.add_column("Profit", justify="right")
     table.add_column("Open Date", justify="right")
