@@ -138,7 +138,8 @@ class FreqText(App):
         trades = ftuic.get_open_trades()
         if trades is not None:
             for t in trades:
-                otime = datetime.strptime(f"{t['open_date']}", self.app.DFMT).astimezone(tz=timezone.utc)
+                otime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
+                # otime = datetime.strptime(f"{t['open_date']}", self.app.DFMT).astimezone(tz=timezone.utc)
                 ctime = datetime.now(tz=timezone.utc)
 
                 # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
@@ -198,8 +199,8 @@ class FreqText(App):
         trades = ftuic.get_all_closed_trades()
         if trades is not None:
             for t in trades:
-                otime = datetime.strptime(t['open_date'], self.DFMT).astimezone(tz=timezone.utc)
-                ctime = datetime.strptime(t['close_date'], self.DFMT).astimezone(tz=timezone.utc)
+                otime = datetime.strptime(t['open_date'], self.DFMT) # .astimezone(tz=timezone.utc)
+                ctime = datetime.strptime(t['close_date'], self.DFMT) # .astimezone(tz=timezone.utc)
 
                 # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
                 pairstr = t['pair']
