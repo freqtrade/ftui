@@ -258,6 +258,12 @@ ListView Label {
     height: 3;
 }
 
+#help-above {
+    layout: horizontal;
+    height: auto;
+    border: green;
+}
+
 #info {
     width: auto;
 }

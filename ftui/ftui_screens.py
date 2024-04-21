@@ -1,3 +1,4 @@
+from pathlib import Path
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -16,8 +17,8 @@ from textual.screen import Screen, ModalScreen
 from textual.widgets import (
     Button, Checkbox, Collapsible, DataTable, Digits,
     Footer, Header, Input, Label, ListView, ListItem,
-    Log, Markdown, Select, Static, TabbedContent,
-    TabPane
+    Log, Markdown, MarkdownViewer, Select, Static,
+    TabbedContent, TabPane
 )
 from textual.worker import get_current_worker
 
@@ -152,7 +153,7 @@ class DashboardScreen(Screen):
                 f"[@click=app.switch_to_bot('{bot_name}')]{bot_name}[/]",
                 f"{v['ID']}",
                 f"{v['Pair']}",
-                f"{v['Stake']}",
+                f"{v['Stake Amount']}",
             )
 
             if trading_mode != "spot":
@@ -1306,17 +1307,47 @@ class HelpScreen(Screen):
 
     timers = {}
 
+    help_file_path = Path(__file__).parent / "md" / "help.md"
+
+    header_str = """
+    ███████╗████████╗██╗   ██╗██╗
+    ██╔════╝╚══██╔══╝██║   ██║██║
+    █████╗     ██║   ██║   ██║██║
+    ██╔══╝     ██║   ██║   ██║██║
+    ██║        ██║   ╚██████╔╝██║
+    ╚═╝        ╚═╝    ╚═════╝ ╚═╝
+    """
+
+    @property
+    def markdown_viewer(self) -> MarkdownViewer:
+        """Get the Markdown widget."""
+        return self.query_one(MarkdownViewer)
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
-        with Container(id="above"):
-            yield Static("FTUI Help")
+        with Container(id="help-above"):
+            yield Static(self.header_str)
 
         with Container(id="parent-container"):
             with Container(id="right"):
-                yield Markdown("-- Hello")
+                yield MarkdownViewer()
 
         yield Footer()
+
+    async def on_mount(self) -> None:
+        self.markdown_viewer.focus()
+        try:
+            await self.markdown_viewer.go(self.help_file_path)
+        except FileNotFoundError:
+            msg = (
+                f"Unable to load help file: {self.help_file_path!r}"
+            )
+            self.notify(
+                msg,
+                title=f"Error:",
+                severity="warning",
+            )
 
 
 class BasicModal(ModalScreen[int]):
