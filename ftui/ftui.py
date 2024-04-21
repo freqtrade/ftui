@@ -70,7 +70,8 @@ args = None
 class FreqText(App):
     """
     Freqtrade text interface based on Textual.
-    A spiritual successor to frogtrade9000.
+    A spiritual successor to frogtrade9000,
+    written originally by @froggleston.
     """
 
     CSS_PATH = "freqtext.css"

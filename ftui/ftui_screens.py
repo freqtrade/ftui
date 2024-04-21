@@ -503,6 +503,13 @@ class MainBotScreen(Screen):
                     with Collapsible(title="Candlestick Chart",
                                      id="bot-chrt-collap",
                                      collapsed=False):
+                        with Horizontal(id="bot-chart-header"):
+                            yield Button(
+                                "Refresh",
+                                id="bot-refresh-chart-button",
+                                variant="success"
+                            )
+
                         yield ListView(
                             id="whitelist",
                             classes="bg-static-default"
@@ -606,6 +613,14 @@ class MainBotScreen(Screen):
             return bot_id
         except Exception:
             return None
+
+    @on(Button.Pressed, "#bot-refresh-chart-button")
+    def refresh_chart_button_pressed(self) -> None:
+        bot_id = self._get_bot_id_from_client_list()
+
+        chart_container = self.query_one("#bot-chart")
+        chart_container.loading = True
+        self.update_chart(bot_id, pair=self.prev_chart_pair, refresh=True)
 
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         tab_id = event.tab.id
@@ -846,7 +861,7 @@ class MainBotScreen(Screen):
                 # f"{v['Entry']}",
                 f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
                 f"[@click=update_chart('{ftuic.name}', '{pairstr}')]{pairstr}[/]",
-                f"{t['stake_amount']}",
+                f"{round(t['stake_amount'], 3)}",
             )
 
             if ftuic.get_client_config().get('trading_mode') != "spot":

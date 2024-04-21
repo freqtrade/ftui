@@ -173,8 +173,25 @@ ListView Label {
     margin-top: 1;
 }
 
+#all-open-trades-table {
+    link-color: goldenrod;
+}
+
 #closed-trades-table {
     link-color: goldenrod;
+}
+
+#bot-chart-header {
+    dock: top;
+    height: 1;
+    background: #222;
+}
+
+#bot-refresh-chart-button {
+    dock: right;
+    height: 1;
+    border: none;
+    margin-right: 1;
 }
 
 #bot-chart-container {
