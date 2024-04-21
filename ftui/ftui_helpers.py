@@ -513,32 +513,38 @@ def bot_perf_summary_table(row_data) -> Table:
     return table
 
 
+def bot_general_info(client) -> str:
+    config = client.get_client_config()
+
+    return "## General Info\n\n"
+
+
 def bot_config(client) -> str:
     config = client.get_client_config()
 
-    config_text = f"""
-    [italic]Bot Info[/italic]
-    [bold]Bot Name            :[/bold] {config['bot_name']}
-    [bold]URL                 :[/bold] [@click=app.open_link('{client.url}:{client.port}')]{client.url}:{client.port}[/]
+    config_text = (
+        "## Bot Info\n\n"
+        f"**Bot Name**            : {config['bot_name']}  \n"
+        f"**URL**                 : [{client.url}:{client.port}]({client.url}:{client.port})\n\n"
 
-    [bold]Version             :[/bold] {config['version']}
-    [bold]Runmode             :[/bold] {config['runmode']}
-    [bold]Force Entry         :[/bold] {config['force_entry_enable']}
-    [bold]Position Adjustment :[/bold] {config['position_adjustment_enable']}
+        f"**Version**             : {config['version']}  \n"
+        f"**Runmode**             : {config['runmode']}  \n"
+        f"**Force Entry**         : {config['force_entry_enable']}  \n"
+        f"**Position Adjustment** : {config['position_adjustment_enable']}\n\n"
 
-    [italic]Strategy Info[/italic]
-    [bold]Strategy            :[/bold] {config['strategy']}
-    [bold]Strategy Version    :[/bold] {config['strategy_version']}
-    [bold]Timeframe           :[/bold] {config['timeframe']}
-    [bold]Stoploss            :[/bold] {config['stoploss']}
-    [bold]Max Open Trades     :[/bold] {config['max_open_trades']}
+        f"## Strategy Info\n\n"
+        f"**Strategy**            : {config['strategy']}  \n"
+        f"**Strategy Version**    : {config['strategy_version']}  \n"
+        f"**Timeframe**           : {config['timeframe']}  \n"
+        f"**Stoploss**            : {config['stoploss']}  \n"
+        f"**Max Open Trades**     : {config['max_open_trades']}\n\n"
 
-    [italic]Market Config[/italic]
-    [bold]Exchange            :[/bold] {config['exchange']}
-    [bold]Trading Mode        :[/bold] {config['trading_mode']}
-    [bold]Shorting            :[/bold] {config['short_allowed']}
-    [bold]Stake Currency      :[/bold] {config['stake_currency']}
-    [bold]Stake Amount        :[/bold] {config['stake_amount']}
-    """
+        f"## Market Config\n\n"
+        f"**Exchange**            : {config['exchange']}  \n"
+        f"**Trading Mode**        : {config['trading_mode']}  \n"
+        f"**Shorting**            : {config['short_allowed']}  \n"
+        f"**Stake Currency**      : {config['stake_currency']}  \n"
+        f"**Stake Amount**        : {config['stake_amount']}\n\n"
+    )
 
     return config_text

@@ -1,3 +1,5 @@
+import webbrowser
+
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -24,11 +26,18 @@ from textual.worker import get_current_worker
 
 import ftui.ftui_client as ftuic
 import ftui.ftui_helpers as fth
+from ftui.widgets.label_item import LabelItem
+from ftui.widgets.linkable_markdown_viewer import LinkableMarkdownViewer
 
 
 class DashboardScreen(Screen):
 
     timers = {}
+
+    COLLAP_FUNC_MAP = {
+        # collapsibles
+        "dsh-cp-collap": "update_cumulative_profit_plot",
+    }
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -95,7 +104,8 @@ class DashboardScreen(Screen):
                                      id="dsh-cp-collap",
                                      collapsed=True):
                         yield PlotextPlot(
-                            id="dash-cumprof-profit"
+                            id="dash-cumprof-profit",
+                            classes="bg-static-default"
                         )
 
                     # with Collapsible(title="Daily Trade Summary",
@@ -451,7 +461,7 @@ class DashboardScreen(Screen):
 
                 dates = cplt.datetimes_to_string(all_cum_data.index)
 
-                cplt.plot(dates, all_cum_data['plot_cumprof'].values)
+                cplt.plot(dates, all_cum_data['plot_cumprof'].values, color="orange")
                 cplt.ylim(all_cum_data['plot_cumprof'].min() * 0.99,
                           all_cum_data['plot_cumprof'].max() * 1.01)
                 cplt.ylabel("Profit")
@@ -459,6 +469,24 @@ class DashboardScreen(Screen):
                 worker = get_current_worker()
                 if not worker.is_cancelled:
                     self.app.call_from_thread(chart_container.refresh)
+                chart_container.loading = False
+
+    @on(Collapsible.Toggled)
+    def toggle_collapsible(self, event: Collapsible.Toggled) -> None:
+        event.stop()
+        collap = event.collapsible
+
+        collap_children = collap.query().filter(".bg-static-default")
+
+        if collap.collapsed is False:
+            for child in collap_children:
+                child.loading = True
+
+        if collap.id in self.COLLAP_FUNC_MAP:
+            getattr(self, self.COLLAP_FUNC_MAP[collap.id])()
+        else:
+            for child in collap_children:
+                child.loading = False
 
 
 class MainBotScreen(Screen):
@@ -471,7 +499,7 @@ class MainBotScreen(Screen):
         "closed-trades-tab": "update_closed_trades_tab",
         "tag-summary-tab": "update_tag_summary_tab",
         "perf-summary-tab": "update_performance_tab",
-        "config-tab": "update_config_tab",
+        "general-tab": "update_general_tab",
         "logs-tab": "update_logs_tab",
     }
 
@@ -545,11 +573,17 @@ class MainBotScreen(Screen):
                             classes="bg-static-default"
                         )
 
-                    with TabPane("Config", id="config-tab"):
-                        yield Static(
-                            id="config-summary",
-                            classes="bg-static-default"
-                        )
+                    with TabPane("General", id="general-tab"):
+                        with Horizontal(id="bot-config-container"):
+                            yield LinkableMarkdownViewer(
+                                id="bot-general-markdown",
+                                show_table_of_contents=False
+                            )
+
+                            yield LinkableMarkdownViewer(
+                                id="bot-config-markdown",
+                                show_table_of_contents=False
+                            )
 
                     with TabPane("Logs", id="logs-tab"):
                         yield Log(id="log")
@@ -1176,16 +1210,20 @@ class MainBotScreen(Screen):
             self.app.call_from_thread(dt.update, table)
         dt.loading = False
 
-    # bot config tab
-    def update_config_tab(self, tab_id, bot_id):
+    @work(group="bot_general_worker", exclusive=False, thread=True)
+    def update_general_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
         if bot_id is not None and bot_id != 'Select.BLANK':
             cl = client_dict[bot_id]
 
-            dt = self.query_one("#config-summary")
-            c = fth.bot_config(cl)
-            dt.update(c)
+            gdt = self.query_one("#bot-general-markdown")
+            gc = fth.bot_general_info(cl)
+            self.app.call_from_thread(gdt.document.update, gc)
+
+            cdt = self.query_one("#bot-config-markdown")
+            cc = fth.bot_config(cl)
+            self.app.call_from_thread(cdt.document.update, cc)
 
     @work(group="bot_logs_worker", exclusive=False, thread=True)
     def update_logs_tab(self, tab_id, bot_id):
@@ -1250,16 +1288,6 @@ class MainBotScreen(Screen):
     def debug(self, msg):
         debuglog = self.query_one("#debug-log")
         debuglog.write(msg)
-
-
-# custom widget to easily get label values from ListItems
-class LabelItem(ListItem):
-    def __init__(self, label: str) -> None:
-        super().__init__()
-        self.label = label
-
-    def compose(self) -> ComposeResult:
-        yield Label(self.label)
 
 
 class SettingsScreen(Screen):
@@ -1334,9 +1362,9 @@ class HelpScreen(Screen):
     """
 
     @property
-    def markdown_viewer(self) -> MarkdownViewer:
+    def markdown_viewer(self) -> LinkableMarkdownViewer:
         """Get the Markdown widget."""
-        return self.query_one(MarkdownViewer)
+        return self.query_one(LinkableMarkdownViewer)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -1346,7 +1374,7 @@ class HelpScreen(Screen):
 
         with Container(id="parent-container"):
             with Container(id="right"):
-                yield MarkdownViewer()
+                yield LinkableMarkdownViewer()
 
         yield Footer()
 
@@ -1454,3 +1482,4 @@ class TradeInfoScreen(BasicModal):
         # three = Static(three_text, classes="box", id="three")
 
         return main, two
+

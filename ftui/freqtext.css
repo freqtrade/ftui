@@ -210,6 +210,8 @@ ListView Label {
     background: initial;
     padding-top: 1;
     height: 3;
+    margin-top: -1;
+    margin-bottom: -1;
 }
 
 #bot-chart-container Collapsible > Container {
@@ -219,12 +221,29 @@ ListView Label {
 }
 
 #bot-chart {
-    height: 32;
+    height: 31;
     width: 100%;
     padding-left: 1;
     padding-right: 1;
     overflow: auto;
     scrollbar-gutter: stable;
+}
+
+#bot-config-container {
+    height: auto;
+    width: 100%;
+}
+
+#bot-general-markdown {
+    dock: left;
+    width: 50%;
+    height: auto;
+}
+
+#bot-config-markdown {
+    width: 100%;
+    height: auto;
+    border-left: white;
 }
 
 #settings-left {
