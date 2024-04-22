@@ -202,7 +202,8 @@ ListView Label {
 
 #bot-chart-container Collapsible {
     border-left: #222;
-    margin-left: -2;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 #bot-chart-container CollapsibleTitle {
@@ -210,12 +211,11 @@ ListView Label {
     background: initial;
     padding-top: 1;
     height: 3;
-    margin-top: -1;
-    margin-bottom: -1;
 }
 
 #bot-chart-container Collapsible > Container {
     padding-top: 1;
+    margin-top: 0;
     background: initial;
     height: 33;
 }
@@ -234,16 +234,33 @@ ListView Label {
     width: 100%;
 }
 
-#bot-general-markdown {
+#bot-general-vert {
     dock: left;
-    width: 50%;
+    width: 60%;
     height: auto;
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+
+#bot-general-markdown {
+    height: auto;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 1;
+    padding-right: 1;
+}
+
+#bot-general-table {
+    height: auto;
+    width: 100%;
 }
 
 #bot-config-markdown {
     width: 100%;
     height: auto;
     border-left: white;
+    padding-left: 4;
 }
 
 #settings-left {

@@ -166,7 +166,7 @@ class FreqText(App):
                     t['enter_tag'],
                     t['open_date'],
                     t['stake_amount'],
-                    t['leverage']
+                    t['leverage'],
                 ))
 
         df = pd.DataFrame(
@@ -185,7 +185,7 @@ class FreqText(App):
                 "Entry",
                 "Open Date",
                 "Stake Amount",
-                "Leverage"
+                "Leverage",
             ]
         )
 

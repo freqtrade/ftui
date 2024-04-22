@@ -2,9 +2,9 @@ from pathlib import Path
 import webbrowser
 
 from textual import on
-from textual.widgets import Markdown, MarkdownViewer
+from textual.widgets import Markdown
 
-class LinkableMarkdownViewer(MarkdownViewer):
+class LinkableMarkdown(Markdown):
 
     @on(Markdown.LinkClicked)
     def handle_link(self, event: Markdown.LinkClicked) -> None:

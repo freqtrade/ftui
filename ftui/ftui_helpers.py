@@ -516,7 +516,67 @@ def bot_perf_summary_table(row_data) -> Table:
 def bot_general_info(client) -> str:
     config = client.get_client_config()
 
-    return "## General Info\n\n"
+    general_text = (
+        "## General\n\n"
+
+        f"Running Freqtrade {config['version']}\n\n"
+
+        f"Running with {config['max_open_trades']}x {config['stake_amount']} {config['stake_currency']} on {config['exchange']} in {config['trading_mode']} markets, with Strategy {config['strategy']}.\n\n"
+
+        f"Stoploss on exchange is {'enabled' if config['stoploss_on_exchange'] else 'disabled'}.\n\n"
+
+        f"Currently running, force entry: {config['force_entry_enable']}\n\n"
+
+        f"{config['runmode']}\n\n"
+    )
+
+    return general_text
+
+def bot_general_metrics_table(client) -> str:
+    config = client.get_client_config()
+
+    TZFMT = "%Y-%m-%d %H:%M:%S%z"
+
+    t = client.get_total_profit()
+    if t is None:
+        return "[ERROR] Could not retrieve profit data."
+
+    pcc = round(float(t['profit_closed_coin']), 2)
+    best_pair = t['best_pair']
+
+    trade_count = t['trade_count']
+    closed_trade_count = t['closed_trade_count']
+
+    table = Table(expand=True, box=box.HORIZONTALS, row_styles=["grey89", ""])
+    table.add_column("Metric", style="bold white", no_wrap=True, ratio=1)
+    table.add_column("Value", style="white", no_wrap=False, ratio=2)
+
+    row_data = [
+        (f"Avg Profit", f"{round(t['profit_all_ratio_mean']*100, 2)}% (∑ {round(t['profit_all_ratio_sum']*100, 2)}%) in {trade_count} trades"),
+
+
+        (f"ROI closed trades", f"{round(t['profit_closed_coin'], 2)} {config['stake_currency']} ({round(t['profit_closed_ratio_mean'], 2)}%)"),
+        (f"ROI all trades", f"{round(t['profit_all_coin'], 2)} {config['stake_currency']} ({round(t['profit_all_ratio_mean'], 2)}%)"),
+        (f"Total Trade count", f"{trade_count}"),
+        (f"Bot started", f"{t['bot_start_date']}"),
+        (f"First Trade opened", f"{t['first_trade_date']}"),
+        (f"Latest Trade opened", f"{t['latest_trade_date']}"),
+        (f"Win / Loss", f"{t['winning_trades']} / {t['losing_trades']}"),
+        (f"Winrate", f"{round(t['winrate'], 3)}%"),
+        (f"Expectancy (ratio)", f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"),
+        (f"Avg. Duration", f"{t['avg_duration']}"),
+        (f"Best performing", f"{t['best_pair']}: {t['best_rate']}%"),
+        (f"Trading volume", f"{round(t['trading_volume'], 2)} {config['stake_currency']}"),
+        (f"Profit factor", f"{round(t['profit_factor'], 2)}"),
+        (f"Max Drawdown", f"{round(t['max_drawdown']*100, 2)}% ({round(t['max_drawdown_abs'], 2)} {config['stake_currency']}) from {t['max_drawdown_start']} to {t['max_drawdown_end']}"),
+    ]
+
+    for row in row_data:
+        table.add_row(
+            *row
+        )
+
+    return table
 
 
 def bot_config(client) -> str:

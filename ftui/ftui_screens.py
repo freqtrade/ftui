@@ -27,7 +27,7 @@ from textual.worker import get_current_worker
 import ftui.ftui_client as ftuic
 import ftui.ftui_helpers as fth
 from ftui.widgets.label_item import LabelItem
-from ftui.widgets.linkable_markdown_viewer import LinkableMarkdownViewer
+from ftui.widgets.linkable_markdown_viewer import LinkableMarkdown
 
 
 class DashboardScreen(Screen):
@@ -575,14 +575,17 @@ class MainBotScreen(Screen):
 
                     with TabPane("General", id="general-tab"):
                         with Horizontal(id="bot-config-container"):
-                            yield LinkableMarkdownViewer(
-                                id="bot-general-markdown",
-                                show_table_of_contents=False
-                            )
+                            with Vertical(id="bot-general-vert"):
+                                yield LinkableMarkdown(
+                                    id="bot-general-markdown"
+                                )
 
-                            yield LinkableMarkdownViewer(
-                                id="bot-config-markdown",
-                                show_table_of_contents=False
+                                yield Static(
+                                    id="bot-general-table"
+                                )
+
+                            yield LinkableMarkdown(
+                                id="bot-config-markdown"
                             )
 
                     with TabPane("Logs", id="logs-tab"):
@@ -810,11 +813,11 @@ class MainBotScreen(Screen):
         row_data.append((
             f"{bot_start_date}",
             trade_cnt_str,
-            fth.red_or_green(round(open_profit, 2)),
+            fth.red_or_green(round(open_profit, 2), justify="right"),
             f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
             f"[cyan]{round(winrate, 1)}",
             f"[magenta]{round(expectancy, 2)}",
-            fth.red_or_green(round(expectancy_ratio, 2)),
+            fth.red_or_green(round(expectancy_ratio, 2), justify="right"),
             f"[green]{median_win}",
             f"[red]{median_loss}",
             fth.red_or_green(pcc, justify="right")
@@ -1160,6 +1163,11 @@ class MainBotScreen(Screen):
                 for idx, t in all_trades.iterrows():
                     odate = t['Open Date']
 
+                    trade_dir = t['S/L']
+                    open_marker = '\u25b2'
+                    if trade_dir == 'S':
+                        open_marker = '\u25bc'
+
                     if odate < max_date:
                         if odate> min_date:
                             o_events.append(t['Open Rate'])
@@ -1170,7 +1178,7 @@ class MainBotScreen(Screen):
                             c_events.append(t['Close Rate'])
                             c_dates.append(t['Close Date'])
 
-                cplt.scatter(cplt.datetimes_to_string(o_dates), o_events, marker='o', color='cyan')
+                cplt.scatter(cplt.datetimes_to_string(o_dates), o_events, marker=open_marker, color='blue')
                 cplt.scatter(cplt.datetimes_to_string(c_dates), c_events, marker='x', color='yellow')
 
             self.app.call_from_thread(chart_container.refresh)
@@ -1217,13 +1225,17 @@ class MainBotScreen(Screen):
         if bot_id is not None and bot_id != 'Select.BLANK':
             cl = client_dict[bot_id]
 
-            gdt = self.query_one("#bot-general-markdown")
+            gdm = self.query_one("#bot-general-markdown")
             gc = fth.bot_general_info(cl)
-            self.app.call_from_thread(gdt.document.update, gc)
+            self.app.call_from_thread(gdm.update, gc)
+
+            gdt = self.query_one("#bot-general-table")
+            gm = fth.bot_general_metrics_table(cl)
+            self.app.call_from_thread(gdt.update, gm)
 
             cdt = self.query_one("#bot-config-markdown")
             cc = fth.bot_config(cl)
-            self.app.call_from_thread(cdt.document.update, cc)
+            self.app.call_from_thread(cdt.update, cc)
 
     @work(group="bot_logs_worker", exclusive=False, thread=True)
     def update_logs_tab(self, tab_id, bot_id):
@@ -1362,9 +1374,9 @@ class HelpScreen(Screen):
     """
 
     @property
-    def markdown_viewer(self) -> LinkableMarkdownViewer:
+    def markdown_viewer(self) -> LinkableMarkdown:
         """Get the Markdown widget."""
-        return self.query_one(LinkableMarkdownViewer)
+        return self.query_one(LinkableMarkdown)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -1374,7 +1386,7 @@ class HelpScreen(Screen):
 
         with Container(id="parent-container"):
             with Container(id="right"):
-                yield LinkableMarkdownViewer()
+                yield LinkableMarkdown()
 
         yield Footer()
 
