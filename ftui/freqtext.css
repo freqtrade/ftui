@@ -306,7 +306,7 @@ ListView Label {
     padding-top: 1;
 }
 
-#save-settings-button {
+#bot-save-settings-button {
     dock: right;
     height: 3;
 }

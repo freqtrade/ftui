@@ -1311,7 +1311,7 @@ class SettingsScreen(Screen):
 
         with Container(id="settings-above"):
             yield Static("FTUI Settings")
-            yield Button("Save", id="save-settings-button", variant="success")
+            yield Button("Save", id="bot-save-settings-button", variant="success")
 
         with Container(id="parent-container"):
             with Container(id="right"):
@@ -1324,6 +1324,14 @@ class SettingsScreen(Screen):
 
     def on_mount(self):
         self.update_settings(self.app.settings)
+
+    @on(Button.Pressed, "#bot-save-settings-button")
+    def save_settings_button_pressed(self) -> None:
+        self.notify(
+            "Saving of settings is not currently implemented",
+            title="Not Implemented",
+            severity="warning",
+        )
 
     def update_settings(self, s):
         settings_left = self.query_one("#settings-left")
