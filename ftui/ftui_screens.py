@@ -1093,7 +1093,7 @@ class MainBotScreen(Screen):
                     severity="warning",
                 )
 
-    def _render_chart(self, ftuic, pair, data, trades=None):
+    def _render_chart(self, ftuic, pair, data):
         chart_container = self.query_one("#bot-chart")
         cw, ch = chart_container.container_size
 
@@ -1291,6 +1291,11 @@ class MainBotScreen(Screen):
 
             wl = self.query_one("#whitelist")
             wl.clear()
+
+            if self.prev_chart_pair is not None and self.prev_chart_pair in whitelist:
+                wl.append(LabelItem(self.prev_chart_pair))
+                whitelist.remove(self.prev_chart_pair)
+
             for pair in whitelist:
                 wl.append(LabelItem(pair))
 
