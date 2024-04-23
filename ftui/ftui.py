@@ -13,7 +13,7 @@ Freqtrade Textual User Interface (FTUI)
 
 Run with:
 
-    python3 ftui.py -y yaml.file
+    ftui -y config.yaml
 
 """
 

@@ -1430,7 +1430,7 @@ class HelpScreen(Screen):
     async def on_mount(self) -> None:
         self.markdown_viewer.focus()
         try:
-            await self.markdown_viewer.go(self.help_file_path)
+            await self.markdown_viewer.load(self.help_file_path)
         except FileNotFoundError:
             msg = (
                 f"Unable to load help file: {self.help_file_path!r}"
