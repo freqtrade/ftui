@@ -1110,80 +1110,107 @@ class MainBotScreen(Screen):
             data.drop(columns=['Date'], inplace=True)
             data.index = data.index.tz_localize(None)
 
-            min_date = data.index.min()
-            max_date = data.index.max()
+            if len(data.index) > 0:
+                min_date = data.index.min()
+                max_date = data.index.max()
 
-            # scatter
-            client_dfs = self.app.client_dfs
-            open_data = fth.get_open_dataframe_data(ftuic, client_dfs)
-            open_data = open_data[open_data['Pair'] == pair]
-            closed_data = fth.get_closed_dataframe_data(ftuic, client_dfs)
-            closed_data = closed_data[closed_data['Pair'] == pair]
-
-            all_trades = pd.concat([open_data, closed_data])
-
-            if all_trades is not None and not all_trades.empty:
-                all_trades['Open Date'] = pd.to_datetime(all_trades['Open Date']).dt.tz_localize(None)
-                all_trades['Close Date'] = pd.to_datetime(all_trades['Close Date']).dt.tz_localize(None)
-
-                o_events = []
-                o_dates = []
-                c_events = []
-                c_dates = []
-                for idx, t in all_trades.iterrows():
-                    odate = t['Open Date']
-
-                    trade_dir = t['S/L']
-                    open_marker = '\u25b2'
-                    if trade_dir == 'S':
-                        open_marker = '\u25bc'
-
-                    if odate < max_date:
-                        if odate> min_date:
-                            o_events.append(t['Open Rate'])
-                            o_dates.append(odate.strftime(self.app.DFMT))
-
-                    if "Close Rate" in t and t['Close Rate'] is not None and not pd.isna(t['Close Rate']):
-                        if t['Close Date'] > min_date:
-                            c_events.append(t['Close Rate'])
-                            c_dates.append(t['Close Date'].strftime(self.app.DFMT))
-
-                if len(o_dates) > 0 or len(c_dates) > 0:
-                    cplt.scatter(o_dates, o_events, marker=open_marker, color='blue')
-                    cplt.scatter(c_dates, c_events, marker='x', color='yellow')
-
-            # candlestick
-            dates = cplt.datetimes_to_string(data.index)
-
-            cplt.title(f"{pair} ({ftuic.get_client_config()['timeframe']})")
-            cplt.xlabel("Date")
-
-            ymin = data['Low'].min()
-            ymax = data['High'].max()
-            yrange = ymax - ymin
-
-            # stop plotext crashing if having to plot tiny values
-            ytick_labels = None
-            if ymax < 0.00001 or ymin < 0.00001:
-                print("Scaling up by 10000")
-                data['Low'] = data['Low'] * 100000
-                data['High'] = data['High'] * 100000
-                data['Open'] = data['Open'] * 100000
-                data['Close'] = data['Close'] * 100000
                 ymin = data['Low'].min()
                 ymax = data['High'].max()
                 yrange = ymax - ymin
-                yticks = [i for i in np.linspace(ymin, ymax, 5)]
-                ytick_labels = [f"{i/100000:.6f}" for i in np.linspace(ymin, ymax, 5)]
+                y_per_box = yrange / ch
 
-            y_per_box = yrange / ch
-            cplt.ylim(ymin-y_per_box, ymax+y_per_box)
-            if ytick_labels is not None:
-                cplt.yticks(yticks, ytick_labels)
+                # candlestick
+                dates = cplt.datetimes_to_string(data.index)
 
-            cplt.candlestick(dates, data)
+                cplt.title(f"{pair} ({ftuic.get_client_config()['timeframe']})")
+                cplt.xlabel("Date")
 
-            self.app.call_from_thread(chart_container.refresh)
+                # stop plotext crashing if having to plot tiny values
+                ytick_labels = None
+                if ymax < 0.00001 or ymin < 0.00001:
+                    print("Scaling up by 10000")
+                    data['Low'] = data['Low'] * 100000
+                    data['High'] = data['High'] * 100000
+                    data['Open'] = data['Open'] * 100000
+                    data['Close'] = data['Close'] * 100000
+                    ymin = data['Low'].min()
+                    ymax = data['High'].max()
+                    yrange = ymax - ymin
+                    yticks = [i for i in np.linspace(ymin, ymax, 5)]
+                    ytick_labels = [f"{i/100000:.6f}" for i in np.linspace(ymin, ymax, 5)]
+
+                cplt.ylim(ymin-y_per_box, ymax+y_per_box)
+                if ytick_labels is not None:
+                    cplt.yticks(yticks, ytick_labels)
+
+                cplt.candlestick(dates, data)
+
+                # scatter
+                client_dfs = self.app.client_dfs
+                open_data = fth.get_open_dataframe_data(ftuic, client_dfs)
+                open_data = open_data[open_data['Pair'] == pair]
+                closed_data = fth.get_closed_dataframe_data(ftuic, client_dfs)
+                closed_data = closed_data[closed_data['Pair'] == pair]
+
+                all_trades = pd.concat([open_data, closed_data])
+
+                if all_trades is not None and not all_trades.empty:
+                    all_trades['Open Date'] = pd.to_datetime(all_trades['Open Date']).dt.tz_localize(None)
+                    all_trades['Close Date'] = pd.to_datetime(all_trades['Close Date']).dt.tz_localize(None)
+
+                    o_events = []
+                    o_dates = []
+                    c_events = []
+                    c_dates = []
+                    for idx, t in all_trades.iterrows():
+                        odate = t['Open Date']
+
+                        trade_dir = t['S/L']
+                        open_text = f"Long {t['Profit %']}%"
+                        open_marker = '\u25b2'
+
+                        if trade_dir == 'S':
+                            open_text = f"Short {t['Profit %']}%"
+                            open_marker = '\u25bc'
+
+                        if odate < max_date:
+                            if odate> min_date:
+                                o_events.append(t['Open Rate'])
+                                o_dates.append(odate.strftime(self.app.DFMT))
+                                cplt.text(
+                                    open_text,
+                                    x=odate.strftime(self.app.DFMT),
+                                    y=t['Open Rate']+(y_per_box*2),
+                                    alignment = 'left',
+                                    color = 'orange'
+                                )
+
+                        if "Close Rate" in t and t['Close Rate'] is not None and not pd.isna(t['Close Rate']):
+                            if t['Close Date'] > min_date:
+                                c_events.append(t['Close Rate'])
+                                c_dates.append(t['Close Date'].strftime(self.app.DFMT))
+
+                    if len(o_dates) > 0 or len(c_dates) > 0:
+                        cplt.scatter(o_dates, o_events, marker=open_marker, color='blue')
+                        cplt.scatter(c_dates, c_events, marker='x', color='yellow')
+
+                xticks = [
+                    d.strftime(self.app.DFMT) for d in pd.date_range(
+                        start=min_date,
+                        end=max_date,
+                        periods=5
+                    )
+                ]
+
+                cplt.xticks(xticks)
+
+                self.app.call_from_thread(chart_container.refresh)
+            else:
+                self.notify(
+                    f"Please try clicking Refresh above to retry",
+                    title=f"Error: No data available for {pair}",
+                    severity="warning",
+                )
         chart_container.loading = False
 
     # bot performance tab
