@@ -8,7 +8,7 @@ FTUI is developed using the awesome [Textual](https://textual.textualize.io/) an
 
 - Version: 0.1.0
 - Original concept and development: [@froggleston](https://github.com/froggleston)
-- Github : [https://github.com/freqtrade/freqtrade-ftui](https://github.com/freqtrade/freqtrade-ftui)
+- Github : [https://github.com/freqtrade/freqtrade-ftui](https://github.com/freqtrade/ftui)
 
 ## Getting Started
 
