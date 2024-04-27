@@ -10,6 +10,8 @@ FTUI is developed using the awesome [Textual](https://textual.textualize.io/) an
 - Original concept and development: [@froggleston](https://github.com/froggleston)
 - Github : [https://github.com/freqtrade/ftui](https://github.com/freqtrade/ftui)
 
+![image](https://github.com/freqtrade/ftui/assets/1872302/60deca56-421b-436d-85e3-eea4befe4c37)
+
 ## Getting Started
 
 FTUI is designed to mimic the [FreqUI](https://github.com/freqtrade/frequi) interface as
@@ -120,6 +122,8 @@ __Dashboard__
 
 The main dashboard shows summary statistics from all bots. You can access the dashboard by
 clicking the Dashboard button in the bottom left, or hitting the `D` key.
+
+![image](https://github.com/freqtrade/ftui/assets/1872302/53d9e2ca-1afd-4d0d-ace6-a7a5419a0397)
 
 __View Bots__
 
