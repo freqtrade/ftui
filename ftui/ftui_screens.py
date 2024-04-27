@@ -609,7 +609,7 @@ class MainBotScreen(Screen):
                                     show_eta=False
                                 )
 
-                    if self.app.config.get("debug", False):
+                    if self.app.settings['debug']:
                         with TabPane("Debug", id="debug-tab"):
                             yield Log(id="debug-log")
 

@@ -89,6 +89,7 @@ class FreqText(App):
     last_update = None
 
     settings = {}
+    debug_mode = False
 
     client_dict = {}
     clients_disabled = set()
@@ -513,6 +514,9 @@ def main():
     ftapp = FreqText()
     ftapp.set_client_dict(client_dict)
     ftapp.set_settings(args)
+
+    if args.debug:
+        ftapp.debug_mode = True
 
     print("\nStarting FTUI - preloading all dataframes...", end="")
 
