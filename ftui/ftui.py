@@ -139,11 +139,22 @@ class FreqText(App):
         if trades is not None:
             for t in trades:
                 otime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
-                # otime = datetime.strptime(f"{t['open_date']}", self.app.DFMT).astimezone(tz=timezone.utc)
                 ctime = datetime.now(tz=timezone.utc)
 
-                # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
-                pairstr = t['pair']
+                open_orders = (
+                    t['has_open_orders']
+                    if 'has_open_orders' in t
+                    else (t['open_order_id'] is not None)
+                )
+
+                suff = ''
+                if (open_orders and t['close_rate_requested'] is None):
+                    suff = ' *'
+
+                if (t['close_rate_requested'] is not None):
+                    suff = ' **'
+
+                pairstr = f"{t['pair']}{suff}"
                 rpfta = round(float(t['profit_abs']), 2)
                 t_dir = "S" if t['is_short'] else "L"
                 stop_profit = round(
@@ -199,10 +210,9 @@ class FreqText(App):
         trades = ftuic.get_all_closed_trades()
         if trades is not None:
             for t in trades:
-                otime = datetime.strptime(t['open_date'], self.DFMT) # .astimezone(tz=timezone.utc)
-                ctime = datetime.strptime(t['close_date'], self.DFMT) # .astimezone(tz=timezone.utc)
+                otime = datetime.strptime(t['open_date'], self.DFMT)
+                ctime = datetime.strptime(t['close_date'], self.DFMT)
 
-                # + ('*' if (t['open_order_id'] is not None and t['close_rate_requested'] is None) else '') + ('**' if (t['close_rate_requested'] is not None) else '')
                 pairstr = t['pair']
                 rpfta = round(float(t['profit_abs']), 2)
 
@@ -383,20 +393,20 @@ class FreqText(App):
         self.set_class(show_clients, "-show-clients")
 
     # ACTIONS
-    def action_switch_to_bot(self, bot_id) -> None:
+    async def action_switch_to_bot(self, bot_id) -> None:
         current_screen = self.screen
 
         for ts in current_screen.timers.keys():
             print(f"Pausing {current_screen.id} {ts}")
             current_screen.timers[ts].pause()
 
-        self.switch_mode("bots")
+        await self.switch_mode("bots")
 
         for ts in self.MODES["bots"].timers.keys():
             print(f"Resuming bots {ts}")
             self.MODES["bots"].timers[ts].resume()
 
-        self.MODES['bots'].update_screen(bot_id)
+        self.MODES['bots'].update_select_options(bot_id)
 
     def action_switch_ftui_mode(self, mode) -> None:
         current_screen = self.screen
@@ -429,66 +439,6 @@ class FreqText(App):
         except Exception as e:
             print(f"Error opening link: {e}")
             pass
-
-    # def update_sysinfo_header(self, bot_id):
-    #     cl = client_dict[bot_id]
-    #     data = self.build_sysinfo_header(cl)
-    #     self.replace_sysinfo_header(data)
-
-    # def replace_sysinfo_header(self, data):
-    #     panel = self.query_one("#sysinfo-panel")
-    #     for c in panel.children:
-    #         c.remove()
-    #     sysinfo_group = Group(*data)
-    #     panel.mount(sysinfo_group)
-
-    def build_sysinfo_header(self, ftuic):
-        sysinfo = ftuic.get_sys_info()
-        syslist = []
-
-        progress_table = Table.grid(expand=True, pad_edge=True)
-
-        progress_cpu = Progress(
-            "{task.description}",
-            BarColumn(bar_width=None,
-                      complete_style=Style(color="red"),
-                      finished_style=Style(color="red")),
-            TextColumn("[red]{task.percentage:>3.0f}%"),
-            expand=True,
-        )
-
-        progress_ram = Progress(
-            "{task.description}",
-            BarColumn(bar_width=None,
-                      complete_style=Style(color="magenta"),
-                      finished_style=Style(color="magenta")),
-            TextColumn("[magenta]{task.percentage:>3.0f}%", style=Style(color="magenta")),
-            expand=True,
-        )
-
-        progress_table.add_row(
-            progress_cpu,
-            progress_ram
-        )
-
-        if 'cpu_pct' in sysinfo:
-            for cpux in sysinfo['cpu_pct']:
-                cpujob = progress_cpu.add_task("[cyan] CPU")
-                progress_cpu.update(cpujob, completed=cpux)
-
-            job2 = progress_ram.add_task("[cyan] RAM")
-            progress_ram.update(job2, completed=sysinfo['ram_pct'])
-
-            syslist.append(
-                Rule(
-                    title=f"{ftuic.name} [{ftuic.url}:{ftuic.port}]",
-                    style=Style(color="cyan"),
-                    align="left"
-                )
-            )
-            syslist.append(progress_table)
-
-        return syslist
 
 
 def setup(args):

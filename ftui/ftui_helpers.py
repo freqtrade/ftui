@@ -55,6 +55,44 @@ def get_perf_dataframe_data(client, client_dfs):
     return _get_dataframe_data_from_client(client, client_dfs, 'perf_data')
 
 
+def daily_profit_table(client_dict, num_days_daily) -> Table:
+    table = Table(expand=True, box=box.HORIZONTALS)
+
+    table.add_column("Date", style="white", no_wrap=True)
+    table.add_column("Fear", style="white", no_wrap=True)
+
+    fear = fear_index(num_days_daily)
+
+    for n, client in client_dict.items():
+        table.add_column(f"{n}", style="yellow", justify="right")
+        table.add_column("#", style="cyan", justify="left")
+
+    dailydict = {}
+
+    for n, cl in client_dict.items():
+        t = cl.rest_client.daily(days=num_days_daily)
+        for day in t['data']:
+            if day['date'] not in dailydict.keys():
+                dailydict[day['date']] = [
+                    day['date'],
+                    f"{fear[day['date']]}",
+                    f"{round(float(day['abs_profit']),2)} {t['stake_currency']}",
+                    f"{day['trade_count']}"
+                ]
+            else:
+                dailydict[day['date']].append(
+                    f"{round(float(day['abs_profit']),2)} {t['stake_currency']}"
+                )
+                dailydict[day['date']].append(f"{day['trade_count']}")
+
+    for day, vals in dailydict.items():
+        table.add_row(
+            *vals
+        )
+
+    return table
+
+
 # thanks @rextea!
 def fear_index(num_days_daily, retfear={}):
     default_resp = {
@@ -121,184 +159,6 @@ def dash_all_bot_summary(row_data) -> Table:
     return table
 
 
-def daily_profit_table(client_dict, num_days_daily) -> Table:
-    table = Table(expand=True, box=box.HORIZONTALS)
-
-    table.add_column("Date", style="white", no_wrap=True)
-    table.add_column("Fear", style="white", no_wrap=True)
-
-    fear = fear_index(num_days_daily)
-
-    for n, client in client_dict.items():
-        table.add_column(f"{n}", style="yellow", justify="right")
-        table.add_column("#", style="cyan", justify="left")
-
-    dailydict = {}
-
-    for n, cl in client_dict.items():
-        t = cl.rest_client.daily(days=num_days_daily)
-        for day in t['data']:
-            if day['date'] not in dailydict.keys():
-                dailydict[day['date']] = [
-                    day['date'],
-                    f"{fear[day['date']]}",
-                    f"{round(float(day['abs_profit']),2)} {t['stake_currency']}",
-                    f"{day['trade_count']}"
-                ]
-            else:
-                dailydict[day['date']].append(
-                    f"{round(float(day['abs_profit']),2)} {t['stake_currency']}"
-                )
-                dailydict[day['date']].append(f"{day['trade_count']}")
-
-    for day, vals in dailydict.items():
-        table.add_row(
-            *vals
-        )
-
-    return table
-
-
-def tradeinfo(client_dict, trades_dict, indicators) -> Table:
-    table = Table(expand=True, box=box.HORIZONTALS)
-
-    table.add_column("Pair", style="magenta", no_wrap=True, justify="left")
-    table.add_column("Open", no_wrap=True, justify="right")
-    table.add_column("Close", no_wrap=True, justify="right")
-    table.add_column("Volume", no_wrap=True, justify="right")
-
-    for ind in indicators:
-        header_name = ind['headername']
-        table.add_column(header_name, style="cyan", no_wrap=True, justify="left")
-
-    shown_pairs = []
-
-    for n, client in client_dict.items():
-        cl = client[0]
-        state = client[1]
-
-        uparrow = "\u2191"
-        downarrow = "\u2193"
-
-        if isinstance(cl, ftrc.FtRestClient):
-            if state == "running":
-                open_trades = cl.status()
-                if open_trades is not None:
-                    for t in open_trades:
-                        if t['pair'] not in shown_pairs:
-                            try:
-                                pairjson = cl.pair_candles(t['pair'], "5m", 2)
-                                shown_pairs.append(t['pair'])
-
-                                if pairjson['columns'] and pairjson['data']:
-                                    cols = pairjson['columns']
-                                    data = pairjson['data']
-
-                                    pairdf = pd.DataFrame(data, columns=cols)
-                                    op = pairdf['open'].values[0]
-                                    cl = pairdf['close'].values[0]
-                                    candle_colour = "[green]"
-                                    if op >= cl:
-                                        candle_colour = "[red]"
-
-                                    inds = []
-
-                                    inds.append(f"{t['pair']}")
-                                    inds.append(f"{candle_colour}{round(op, 3)}")
-                                    inds.append(f"{candle_colour}{round(cl, 3)}")
-                                    inds.append(f"{int(pairdf['volume'].values[0])}")
-
-                                    for ind in indicators:
-                                        df_colname = str(ind['colname'])
-                                        round_val = ind['round_val']
-                                        if df_colname in pairdf:
-                                            curr_ind = pairdf[df_colname].values[0]
-                                            prev_ind = pairdf[df_colname].values[1]
-
-                                            trend = ""
-                                            if prev_ind > curr_ind:
-                                                trend = f"[red]{downarrow} "
-                                            elif prev_ind < curr_ind:
-                                                trend = f"[green]{uparrow} "
-                                            else:
-                                                trend = "[cyan]- "
-
-                                            if round_val == 0:
-                                                dval = int(curr_ind)
-                                            else:
-                                                dval = round(curr_ind, round_val)
-                                            inds.append(f"{trend}[white]{dval}")
-                                        else:
-                                            inds.append("")
-
-                                    table.add_row(
-                                        *inds
-                                    )
-                                    # tc = get_trade_candle(pairdf, t['open_date'], t['pair'], "5m")
-                            except Exception:
-                                # noone likes exceptions
-                                pass
-
-            closed_trades = trades_dict[n]
-            do_stuff = True
-            if closed_trades is not None and do_stuff:
-                t = closed_trades[0]
-
-                if t['pair'] not in shown_pairs:
-                    try:
-                        pairjson = cl.pair_candles(t['pair'], "5m", 2)
-                        shown_pairs.append(t['pair'])
-
-                        if pairjson['columns'] and pairjson['data']:
-                            cols = pairjson['columns']
-                            data = pairjson['data']
-
-                            pairdf = pd.DataFrame(data, columns=cols)
-                            op = pairdf['open'].values[0]
-                            cl = pairdf['close'].values[0]
-                            candle_colour = "[green]"
-                            if op >= cl:
-                                candle_colour = "[red]"
-
-                            inds = []
-                            inds.append(f"{t['pair']}")
-                            inds.append(f"{candle_colour}{round(op, 3)}")
-                            inds.append(f"{candle_colour}{round(cl, 3)}")
-                            inds.append(f"{int(pairdf['volume'].values[0])}")
-
-                            for ind in indicators:
-                                df_colname = str(ind['colname'])
-                                round_val = ind['round_val']
-                                if df_colname in pairdf:
-                                    curr_ind = pairdf[df_colname].values[0]
-                                    prev_ind = pairdf[df_colname].values[1]
-
-                                    trend = ""
-                                    if prev_ind > curr_ind:
-                                        trend = f"[red]{downarrow} "
-                                    elif prev_ind < curr_ind:
-                                        trend = f"[green]{uparrow} "
-                                    else:
-                                        trend = "[cyan]- "
-
-                                    if round_val == 0:
-                                        dval = int(curr_ind)
-                                    else:
-                                        dval = round(curr_ind, round_val)
-                                    inds.append(f"{trend}[white]{dval}")
-                                else:
-                                    inds.append("")
-
-                            table.add_row(
-                                *inds
-                            )
-                    except Exception:
-                        # noone likes exceptions
-                        pass
-
-    return table
-
-
 def dash_trades_summary(row_data,
                         footer={
                             "all_open_profit": "0",
@@ -315,9 +175,9 @@ def dash_trades_summary(row_data,
     table.add_column("W/L", justify="right", no_wrap=True)
     table.add_column("Winrate", justify="right", no_wrap=True)
     table.add_column("Exp.", justify="right", no_wrap=True)
-    table.add_column("Exp. Rate", justify="right", no_wrap=True)
+    table.add_column("Exp. Rate", justify="left", no_wrap=True)
     table.add_column("Med. W", justify="right", no_wrap=True)
-    table.add_column("Med. L", justify="right", no_wrap=True)
+    table.add_column("Med. L", justify="left", no_wrap=True)
     table.add_column("Tot. Profit", justify="right", no_wrap=True)
 
     for row in row_data:
@@ -517,20 +377,30 @@ def bot_general_info(client) -> str:
     config = client.get_client_config()
 
     general_text = (
-        "## General\n\n"
+        "## General"
+        "\n\n"
 
-        f"Running Freqtrade {config['version']}\n\n"
+        f"Running Freqtrade {config['version']}"
+        "\n\n"
 
-        f"Running with {config['max_open_trades']}x {config['stake_amount']} {config['stake_currency']} on {config['exchange']} in {config['trading_mode']} markets, with Strategy {config['strategy']}.\n\n"
+        f"Running with {config['max_open_trades']}x "
+        f"{config['stake_amount']} {config['stake_currency']} "
+        f"on {config['exchange']} in {config['trading_mode']} markets, "
+        f"with Strategy {config['strategy']}."
+        "\n\n"
 
-        f"Stoploss on exchange is {'enabled' if config['stoploss_on_exchange'] else 'disabled'}.\n\n"
+        f"Stoploss on exchange is {'enabled' if config['stoploss_on_exchange'] else 'disabled'}."
+        "\n\n"
 
-        f"Currently running, force entry: {config['force_entry_enable']}\n\n"
+        f"Currently running, force entry: {config['force_entry_enable']}"
+        "\n\n"
 
-        f"{config['runmode']}\n\n"
+        f"{config['runmode']}"
+        "\n\n"
     )
 
     return general_text
+
 
 def bot_general_metrics_table(client) -> str:
     config = client.get_client_config()
@@ -552,23 +422,42 @@ def bot_general_metrics_table(client) -> str:
     table.add_column("Value", style="white", no_wrap=False, ratio=2)
 
     row_data = [
-        (f"Avg Profit", f"{round(t['profit_all_ratio_mean']*100, 2)}% (∑ {round(t['profit_all_ratio_sum']*100, 2)}%) in {trade_count} trades"),
+        (
+            f"Avg Profit",
+            f"{round(t['profit_all_ratio_mean']*100, 2)}% "
+            f"(∑ {round(t['profit_all_ratio_sum']*100, 2)}%) in {trade_count} trades"
+        ),
 
-
-        (f"ROI closed trades", f"{round(t['profit_closed_coin'], 2)} {config['stake_currency']} ({round(t['profit_closed_ratio_mean'], 2)}%)"),
-        (f"ROI all trades", f"{round(t['profit_all_coin'], 2)} {config['stake_currency']} ({round(t['profit_all_ratio_mean'], 2)}%)"),
+        (
+            f"ROI closed trades",
+            f"{round(t['profit_closed_coin'], 2)} {config['stake_currency']} "
+            f"({round(t['profit_closed_ratio_mean'], 2)}%)"
+        ),
+        (
+            f"ROI all trades",
+            f"{round(t['profit_all_coin'], 2)} {config['stake_currency']} "
+            f"({round(t['profit_all_ratio_mean'], 2)}%)"
+        ),
         (f"Total Trade count", f"{trade_count}"),
         (f"Bot started", f"{t['bot_start_date']}"),
         (f"First Trade opened", f"{t['first_trade_date']}"),
         (f"Latest Trade opened", f"{t['latest_trade_date']}"),
         (f"Win / Loss", f"{t['winning_trades']} / {t['losing_trades']}"),
         (f"Winrate", f"{round(t['winrate'], 3)}%"),
-        (f"Expectancy (ratio)", f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"),
+        (
+            f"Expectancy (ratio)",
+            f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"
+        ),
         (f"Avg. Duration", f"{t['avg_duration']}"),
         (f"Best performing", f"{t['best_pair']}: {t['best_rate']}%"),
         (f"Trading volume", f"{round(t['trading_volume'], 2)} {config['stake_currency']}"),
         (f"Profit factor", f"{round(t['profit_factor'], 2)}"),
-        (f"Max Drawdown", f"{round(t['max_drawdown']*100, 2)}% ({round(t['max_drawdown_abs'], 2)} {config['stake_currency']}) from {t['max_drawdown_start']} to {t['max_drawdown_end']}"),
+        (
+            f"Max Drawdown",
+            f"{round(t['max_drawdown']*100, 2)}% "
+            f"({round(t['max_drawdown_abs'], 2)} {config['stake_currency']}) "
+            f"from {t['max_drawdown_start']} to {t['max_drawdown_end']}"
+        ),
     ]
 
     for row in row_data:

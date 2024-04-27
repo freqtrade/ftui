@@ -104,6 +104,17 @@ ListView Label {
     background: #222;
 }
 
+#dsh-cl-collap {
+    overflow: auto;
+    max-height: 32;
+}
+
+#dash-closed-profit {
+    overflow: auto;
+    height: auto;
+    scrollbar-gutter: auto;
+}
+
 #dash-cumprof-profit {
     height: 32;
     width: 100%;
@@ -261,6 +272,35 @@ ListView Label {
     height: auto;
     border-left: white;
     padding-left: 4;
+}
+
+#bot-sysinfo-container {
+    height: auto;
+    width: 100%;
+}
+
+#bot-sysinfo-container Horizontal {
+    height: auto;
+    width: 100%;
+}
+
+#sysinfo-summary-cpu {
+    height: 3;
+}
+
+#sysinfo-summary-cpu > .sparkline--max-color {
+    color: $error;
+}
+#sysinfo-summary-cpu > .sparkline--min-color {
+    color: $success;
+}
+
+#sysinfo-cpu-text {
+    padding-left: 1;
+}
+
+#sysinfo-progress-ram {
+    width: 100%;
 }
 
 #settings-left {

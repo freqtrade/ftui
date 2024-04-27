@@ -19,8 +19,8 @@ from textual.screen import Screen, ModalScreen
 from textual.widgets import (
     Button, Checkbox, Collapsible, DataTable, Digits,
     Footer, Header, Input, Label, ListView, ListItem,
-    Log, Markdown, MarkdownViewer, Select, Static,
-    TabbedContent, TabPane
+    Log, Markdown, MarkdownViewer, ProgressBar, Rule,
+    Select, Sparkline, Static, TabbedContent, TabPane
 )
 from textual.worker import get_current_worker
 
@@ -157,13 +157,14 @@ class DashboardScreen(Screen):
         row_data = []
 
         for idx, v in data.iterrows():
-            bot_name = v['Bot']
+            #bot_name = v['Bot']
 
             render_data = (
-                f"[@click=app.switch_to_bot('{bot_name}')]{bot_name}[/]",
+                # f"[@click=app.switch_to_bot('{bot_name}')]{bot_name}[/]",
+                f"{v['Bot']}",
                 f"{v['ID']}",
                 f"{v['Pair']}",
-                f"{v['Stake Amount']}",
+                f"{round(v['Stake Amount'], 3)}",
             )
 
             if trading_mode != "spot":
@@ -318,7 +319,7 @@ class DashboardScreen(Screen):
         dt.loading = False
 
     @work(group="dash_all_closed_worker", exclusive=True, thread=True)
-    def update_dashboard_all_closed_trades(self, num_closed_trades=3) -> Table:
+    def update_dashboard_all_closed_trades(self, num_closed_trades=5) -> Table:
         client_dict = self.app.client_dict
         client_dfs = self.app.client_dfs
 
@@ -417,18 +418,18 @@ class DashboardScreen(Screen):
                 f"{n}",
                 f"{bot_start_date}",
                 trade_cnt_str,
-                fth.red_or_green(round(open_profit, 2)),
+                fth.red_or_green(round(open_profit, 2), justify="right"),
                 f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
                 f"[cyan]{round(winrate, 1)}",
                 f"[magenta]{round(expectancy, 2)}",
                 fth.red_or_green(round(expectancy_ratio, 2)),
-                f"[green]{median_win}",
-                f"[red]{median_loss}",
+                fth.red_or_green(round(median_win, 2), justify="right"), #f"[green]{median_win}",
+                fth.red_or_green(round(median_loss, 2), justify="left"), #f"[red]{median_loss}",
                 fth.red_or_green(pcc, justify="right")
             ))
 
         footer = {
-            "all_open_profit": fth.red_or_green(round(all_open_profit, 2)),
+            "all_open_profit": fth.red_or_green(round(all_open_profit, 2), justify="right"),
             "num_wins_losses": f"[green]{all_wins}/[red]{all_losses}",
             "all_total_profit": fth.red_or_green(round(all_profit, 2), justify="right")
         }
@@ -501,6 +502,7 @@ class MainBotScreen(Screen):
         "perf-summary-tab": "update_performance_tab",
         "general-tab": "update_general_tab",
         "logs-tab": "update_logs_tab",
+        "sysinfo-tab": "update_sysinfo_tab",
     }
 
     COLLAP_FUNC_MAP = {
@@ -590,10 +592,26 @@ class MainBotScreen(Screen):
 
                     with TabPane("Logs", id="logs-tab"):
                         yield Log(id="log")
-                        # yield Container(id="sysinfo-panel")
 
-                    with TabPane("Debug", id="debug-tab"):
-                        yield Log(id="debug-log")
+                    with TabPane("Sysinfo", id="sysinfo-tab"):
+                        with Container(id="bot-sysinfo-container"):
+                            with Horizontal():
+                                yield Label("CPU: ")
+                                yield Sparkline(
+                                    id="sysinfo-summary-cpu"
+                                )
+                                yield Label(id="sysinfo-cpu-text")
+                            with Horizontal():
+                                yield Label("RAM: ")
+                                yield ProgressBar(
+                                    id="sysinfo-progress-ram",
+                                    total=100,
+                                    show_eta=False
+                                )
+
+                    if self.app.config.get("debug", False):
+                        with TabPane("Debug", id="debug-tab"):
+                            yield Log(id="debug-log")
 
         yield Footer()
 
@@ -624,7 +642,7 @@ class MainBotScreen(Screen):
 
             tab_id = self._get_active_tab_id()
             if tab_id == "open-trades-tab":
-                self.update_open_trades_tab("open-trades-tab", bot_id)
+                self.update_open_trades_tab(tab_id, bot_id)
 
     async def update_per_five_sec(self):
         bot_id = self._get_bot_id_from_client_list()
@@ -633,8 +651,6 @@ class MainBotScreen(Screen):
             tab_id = self._get_active_tab_id()
             if tab_id != "open-trades-tab" and tab_id in self.TAB_FUNC_MAP:
                 getattr(self, self.TAB_FUNC_MAP[tab_id])(tab_id, bot_id)
-        # else:
-        #     self.update_select_options()
 
     async def update_per_one_min(self):
         bot_id = self._get_bot_id_from_client_list()
@@ -730,14 +746,7 @@ class MainBotScreen(Screen):
 
     def update_screen(self, bot_id):
         self.update_trades_summary(bot_id)
-
         self.update_select_options(bot_id=bot_id)
-
-        # update all tabs when bot selected from dashboard
-        for tab in self.TAB_FUNC_MAP.keys():
-            self.update_tab(tab, bot_id)
-
-        self.update_chart_container(bot_id)
 
     # bot trade summary
     @work(group="bot_summary_worker", exclusive=True, thread=True)
@@ -801,8 +810,6 @@ class MainBotScreen(Screen):
             return []
 
         pcc = round(float(t['profit_closed_coin']), 2)
-        # coin = stake_coin
-        # coin = t['best_pair'].split('/')[1]
         bot_start_date = datetime.strptime(f"{t['bot_start_date']}+00:00", self.app.TZFMT).date()
 
         trade_cnt_str = (
@@ -847,14 +854,7 @@ class MainBotScreen(Screen):
 
         current_time = datetime.now(tz=timezone.utc)
 
-        # get live data every second instead of 5 sec update dataframe
         open_trades = ftuic.get_open_trades()
-
-        # if connection to the server is slow, use the dataframe instead
-        # if ftuic.name in client_dfs and 'op_data' in client_dfs[ftuic.name]:
-        #     trade_data = client_dfs[ftuic.name]['op_data']
-        #     for idx, v in trade_data.iterrows():
-
         for t in open_trades:
             ttime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
             open_orders = (
@@ -871,7 +871,7 @@ class MainBotScreen(Screen):
                 suff = ' **'
 
             pairstr = f"{t['pair']}{suff}"
-
+            rpfta = round(float(t['profit_abs']), 2)
             t_dir = "S" if t['is_short'] else "L"
             stop_profit = round(
                 (
@@ -886,16 +886,6 @@ class MainBotScreen(Screen):
             )
 
             render_data = (
-                # f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
-                # f"[@click=show_pair_candlestick_dialog('{v['Pair']}', '{ftuic.name}')]{v['Pair']}[/]",
-                # f"{v['Open Rate']}",
-                # f"{v['Current Rate']}",
-                # fth.red_or_green(float(v['Stop %'])),
-                # fth.red_or_green(float(v['Profit %']), justify='right'),
-                # fth.red_or_green(float(v['Profit']), justify='right'),
-                # str(v["Dur."]).split('.')[0].replace('0 days ', ''),
-                # f"{v['S/L']}",
-                # f"{v['Entry']}",
                 f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
                 f"[@click=update_chart('{ftuic.name}', '{pairstr}')]{pairstr}[/]",
                 f"{round(t['stake_amount'], 3)}",
@@ -909,7 +899,7 @@ class MainBotScreen(Screen):
                 f"{t['current_rate']}",
                 stp_txt,
                 fth.red_or_green(float(t['profit_pct']), justify='right'),
-                fth.red_or_green(round(float(t['profit_abs']), 2), justify='right'),
+                fth.red_or_green(rpfta, justify='right'),
                 f"{str(current_time-ttime).split('.')[0]}",
                 f"{t_dir}",
                 f"{t['enter_tag']}" if "enter_tag" in t else "",
@@ -1185,10 +1175,11 @@ class MainBotScreen(Screen):
                                     color = 'orange'
                                 )
 
-                        if "Close Rate" in t and t['Close Rate'] is not None and not pd.isna(t['Close Rate']):
-                            if t['Close Date'] > min_date:
-                                c_events.append(t['Close Rate'])
-                                c_dates.append(t['Close Date'].strftime(self.app.DFMT))
+                        if "Close Rate" in t:
+                            if t['Close Rate'] is not None and not pd.isna(t['Close Rate']):
+                                if t['Close Date'] > min_date:
+                                    c_events.append(t['Close Rate'])
+                                    c_dates.append(t['Close Date'].strftime(self.app.DFMT))
 
                     if len(o_dates) > 0 or len(c_dates) > 0:
                         cplt.scatter(o_dates, o_events, marker=open_marker, color='blue')
@@ -1247,7 +1238,7 @@ class MainBotScreen(Screen):
             self.app.call_from_thread(dt.update, table)
         dt.loading = False
 
-    @work(group="bot_general_worker", exclusive=False, thread=True)
+    @work(group="bot_general_worker", exclusive=True, thread=True)
     def update_general_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
@@ -1331,6 +1322,28 @@ class MainBotScreen(Screen):
             for child in collap_children:
                 child.loading = False
 
+    @work(group="sysinfo_summary_worker", exclusive=True, thread=True)
+    def update_sysinfo_tab(self, tab_id, bot_id):
+        client_dict = self.app.client_dict
+
+        cl = client_dict[bot_id]
+        data = self._render_sysinfo(cl)
+
+    def _render_sysinfo(self, ftuic):
+        sysinfo = ftuic.get_sys_info()
+
+        dtc = self.query_one("#sysinfo-summary-cpu")
+        dtt = self.query_one("#sysinfo-cpu-text")
+        dtp = self.query_one("#sysinfo-progress-ram")
+
+        if sysinfo is not None and 'cpu_pct' in sysinfo:
+            worker = get_current_worker()
+            if not worker.is_cancelled:
+                dtc.data = sysinfo['cpu_pct']
+                dtc.styles.width = len(sysinfo['cpu_pct'])
+                dtt.update(f"{np.mean(sysinfo['cpu_pct']):>3.0f}%")
+                dtp.update(progress=sysinfo['ram_pct'])
+
     def debug(self, msg):
         debuglog = self.query_one("#debug-log")
         debuglog.write(msg)
@@ -1389,7 +1402,6 @@ class SettingsScreen(Screen):
                     if setting == "servers":
                         # output server list
                         c = Container(id=f"settings-{setting}")
-                        # c.mount(Label("Server List"))
                         for server in s[setting]:
                             t = Checkbox(
                                 f"{server['name']} [{server['ip']}:{server['port']}]",

@@ -115,20 +115,22 @@ class FTUIClient():
         candles = cl.pair_candles(pair,
                                   timeframe=self.get_client_config()['timeframe'],
                                   limit=limit)
-        cols = candles['columns']
-        data = candles['data']
 
-        if cols and data:
-            df = pd.DataFrame(data, columns=cols)
-            df.rename(
-                columns={
-                    'open': 'Open',
-                    'close': 'Close',
-                    'high': 'High',
-                    'low': 'Low'
-                },
-                inplace=True)
-            return df
+        if candles is not None:
+            cols = candles['columns']
+            data = candles['data']
+
+            if cols and data:
+                df = pd.DataFrame(data, columns=cols)
+                df.rename(
+                    columns={
+                        'open': 'Open',
+                        'close': 'Close',
+                        'high': 'High',
+                        'low': 'Low'
+                    },
+                    inplace=True)
+                return df
 
         return None
 
