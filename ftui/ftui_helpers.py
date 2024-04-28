@@ -14,6 +14,7 @@ import freqtrade_client.ft_rest_client as ftrc
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
+
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
@@ -40,19 +41,19 @@ def _get_dataframe_data_from_client(client, client_dfs, data_type):
 
 
 def get_open_dataframe_data(client, client_dfs):
-    return _get_dataframe_data_from_client(client, client_dfs, 'op_data')
+    return _get_dataframe_data_from_client(client, client_dfs, "op_data")
 
 
 def get_closed_dataframe_data(client, client_dfs):
-    return _get_dataframe_data_from_client(client, client_dfs, 'cl_data')
+    return _get_dataframe_data_from_client(client, client_dfs, "cl_data")
 
 
 def get_tag_dataframe_data(client, client_dfs):
-    return _get_dataframe_data_from_client(client, client_dfs, 'tag_data')
+    return _get_dataframe_data_from_client(client, client_dfs, "tag_data")
 
 
 def get_perf_dataframe_data(client, client_dfs):
-    return _get_dataframe_data_from_client(client, client_dfs, 'perf_data')
+    return _get_dataframe_data_from_client(client, client_dfs, "perf_data")
 
 
 def daily_profit_table(client_dict, num_days_daily) -> Table:
@@ -71,24 +72,22 @@ def daily_profit_table(client_dict, num_days_daily) -> Table:
 
     for n, cl in client_dict.items():
         t = cl.rest_client.daily(days=num_days_daily)
-        for day in t['data']:
-            if day['date'] not in dailydict.keys():
-                dailydict[day['date']] = [
-                    day['date'],
+        for day in t["data"]:
+            if day["date"] not in dailydict.keys():
+                dailydict[day["date"]] = [
+                    day["date"],
                     f"{fear[day['date']]}",
                     f"{round(float(day['abs_profit']),2)} {t['stake_currency']}",
-                    f"{day['trade_count']}"
+                    f"{day['trade_count']}",
                 ]
             else:
-                dailydict[day['date']].append(
+                dailydict[day["date"]].append(
                     f"{round(float(day['abs_profit']),2)} {t['stake_currency']}"
                 )
-                dailydict[day['date']].append(f"{day['trade_count']}")
+                dailydict[day["date"]].append(f"{day['trade_count']}")
 
     for day, vals in dailydict.items():
-        table.add_row(
-            *vals
-        )
+        table.add_row(*vals)
 
     return table
 
@@ -103,39 +102,39 @@ def fear_index(num_days_daily, retfear={}):
                 "value_classification": "Neutral",
                 "timestamp": str(datetime.today()),
             }
-        ]
+        ],
     }
 
     if not retfear:
         resp = requests.get(
-            f'https://api.alternative.me/fng/?limit={num_days_daily}&date_format=kr'
+            f"https://api.alternative.me/fng/?limit={num_days_daily}&date_format=kr"
         )
     else:
         if str(datetime.today()) in retfear:
             return retfear[str(datetime.today())]
         else:
-            resp = requests.get('https://api.alternative.me/fng/?limit=1&date_format=kr')
+            resp = requests.get("https://api.alternative.me/fng/?limit=1&date_format=kr")
 
-    if resp is not None and resp.headers.get('Content-Type').startswith('application/json'):
+    if resp is not None and resp.headers.get("Content-Type").startswith("application/json"):
         try:
             prev_resp = resp.json()
-            df_gf = prev_resp['data']
+            df_gf = prev_resp["data"]
         except Exception:
             prev_resp = default_resp
-            df_gf = prev_resp['data']
+            df_gf = prev_resp["data"]
     else:
         prev_resp = default_resp
-        df_gf = prev_resp['data']
+        df_gf = prev_resp["data"]
 
     colourmap = {}
-    colourmap['Extreme Fear'] = '[red]'
-    colourmap['Fear'] = '[lightred]'
-    colourmap['Neutral'] = '[yellow]'
-    colourmap['Greed'] = '[lightgreen]'
-    colourmap['Extreme Greed'] = '[green]'
+    colourmap["Extreme Fear"] = "[red]"
+    colourmap["Fear"] = "[lightred]"
+    colourmap["Neutral"] = "[yellow]"
+    colourmap["Greed"] = "[lightgreen]"
+    colourmap["Extreme Greed"] = "[green]"
 
     for i in df_gf:
-        retfear[i['timestamp']] = (
+        retfear[i["timestamp"]] = (
             f"{colourmap[i['value_classification']]}{i['value_classification']}"
         )
 
@@ -152,19 +151,14 @@ def dash_all_bot_summary(row_data) -> Table:
     table.add_column("Monthly", style="white", justify="left", ratio=1, no_wrap=True)
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
 
-def dash_trades_summary(row_data,
-                        footer={
-                            "all_open_profit": "0",
-                            "num_wins_losses": "0/0",
-                            "all_total_profit": "0"
-                        }) -> Table:
+def dash_trades_summary(
+    row_data, footer={"all_open_profit": "0", "num_wins_losses": "0/0", "all_total_profit": "0"}
+) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS, show_footer=True)
 
     # ("Bot", "# Trades", "Open Profit", "W/L", "Winrate", "Exp.", "Exp. Rate", "Med W", "Med L", "Tot. Profit")
@@ -181,9 +175,7 @@ def dash_trades_summary(row_data,
     table.add_column("Tot. Profit", justify="right", no_wrap=True)
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     table.columns[3].footer = footer["all_open_profit"]
     table.columns[4].footer = footer["num_wins_losses"]
@@ -214,9 +206,7 @@ def dash_open_trades_table(row_data, trading_mode="spot") -> Table:
     table.add_column("Tag", justify="center")
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -236,9 +226,7 @@ def dash_closed_trades_table(row_data) -> Table:
     table.add_column("Exit", justify="left")
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -246,17 +234,17 @@ def dash_closed_trades_table(row_data) -> Table:
 def dash_cumulative_profit_plot_data(trades, bot=None, pair=None):
     if trades.shape[0] > 0 and bot is not None:
         # Filter trades to one bot
-        trades = trades.loc[trades['Bot'] == bot].copy()
+        trades = trades.loc[trades["Bot"] == bot].copy()
 
         # Filter trades to one pair
         if pair is not None:
-            trades = trades.loc[trades['Pair'] == pair].copy()
+            trades = trades.loc[trades["Pair"] == pair].copy()
 
-    s = trades.resample('D', on='Open Date')['Profit'].sum()
+    s = trades.resample("D", on="Open Date")["Profit"].sum()
 
-    data = pd.DataFrame(index=s.index, data={'binned': s.values})
-    data['plot_cumprof'] = data['binned'].cumsum().round(2)
-    data['plot_cumprof'].ffill(inplace=True)
+    data = pd.DataFrame(index=s.index, data={"binned": s.values})
+    data["plot_cumprof"] = data["binned"].cumsum().round(2)
+    data["plot_cumprof"].ffill(inplace=True)
 
     return data
 
@@ -276,9 +264,7 @@ def bot_trades_summary_table(row_data) -> Table:
     table.add_column("Tot. Profit", justify="right", no_wrap=True)
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -304,9 +290,7 @@ def bot_open_trades_table(row_data, trading_mode="spot") -> Table:
     table.add_column("Tag", justify="center")
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -330,9 +314,7 @@ def bot_closed_trades_table(row_data, trading_mode="spot") -> Table:
     table.add_column("Exit", justify="left")
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -349,9 +331,7 @@ def bot_tag_summary_table(row_data) -> Table:
     table.add_column("Profit", justify="right")
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -366,9 +346,7 @@ def bot_perf_summary_table(row_data) -> Table:
     table.add_column("Total Profit", justify="right")
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -379,22 +357,17 @@ def bot_general_info(client) -> str:
     general_text = (
         "## General"
         "\n\n"
-
         f"Running Freqtrade {config['version']}"
         "\n\n"
-
         f"Running with {config['max_open_trades']}x "
         f"{config['stake_amount']} {config['stake_currency']} "
         f"on {config['exchange']} in {config['trading_mode']} markets, "
         f"with Strategy {config['strategy']}."
         "\n\n"
-
         f"Stoploss on exchange is {'enabled' if config['stoploss_on_exchange'] else 'disabled'}."
         "\n\n"
-
         f"Currently running, force entry: {config['force_entry_enable']}"
         "\n\n"
-
         f"{config['runmode']}"
         "\n\n"
     )
@@ -411,11 +384,11 @@ def bot_general_metrics_table(client) -> str:
     if t is None:
         return "[ERROR] Could not retrieve profit data."
 
-    pcc = round(float(t['profit_closed_coin']), 2)
-    best_pair = t['best_pair']
+    pcc = round(float(t["profit_closed_coin"]), 2)
+    best_pair = t["best_pair"]
 
-    trade_count = t['trade_count']
-    closed_trade_count = t['closed_trade_count']
+    trade_count = t["trade_count"]
+    closed_trade_count = t["closed_trade_count"]
 
     table = Table(expand=True, box=box.HORIZONTALS, row_styles=["grey89", ""])
     table.add_column("Metric", style="bold white", no_wrap=True, ratio=1)
@@ -425,18 +398,17 @@ def bot_general_metrics_table(client) -> str:
         (
             f"Avg Profit",
             f"{round(t['profit_all_ratio_mean']*100, 2)}% "
-            f"(∑ {round(t['profit_all_ratio_sum']*100, 2)}%) in {trade_count} trades"
+            f"(∑ {round(t['profit_all_ratio_sum']*100, 2)}%) in {trade_count} trades",
         ),
-
         (
             f"ROI closed trades",
             f"{round(t['profit_closed_coin'], 2)} {config['stake_currency']} "
-            f"({round(t['profit_closed_ratio_mean'], 2)}%)"
+            f"({round(t['profit_closed_ratio_mean'], 2)}%)",
         ),
         (
             f"ROI all trades",
             f"{round(t['profit_all_coin'], 2)} {config['stake_currency']} "
-            f"({round(t['profit_all_ratio_mean'], 2)}%)"
+            f"({round(t['profit_all_ratio_mean'], 2)}%)",
         ),
         (f"Total Trade count", f"{trade_count}"),
         (f"Bot started", f"{t['bot_start_date']}"),
@@ -444,10 +416,7 @@ def bot_general_metrics_table(client) -> str:
         (f"Latest Trade opened", f"{t['latest_trade_date']}"),
         (f"Win / Loss", f"{t['winning_trades']} / {t['losing_trades']}"),
         (f"Winrate", f"{round(t['winrate'], 3)}%"),
-        (
-            f"Expectancy (ratio)",
-            f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"
-        ),
+        (f"Expectancy (ratio)", f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"),
         (f"Avg. Duration", f"{t['avg_duration']}"),
         (f"Best performing", f"{t['best_pair']}: {t['best_rate']}%"),
         (f"Trading volume", f"{round(t['trading_volume'], 2)} {config['stake_currency']}"),
@@ -456,14 +425,12 @@ def bot_general_metrics_table(client) -> str:
             f"Max Drawdown",
             f"{round(t['max_drawdown']*100, 2)}% "
             f"({round(t['max_drawdown_abs'], 2)} {config['stake_currency']}) "
-            f"from {t['max_drawdown_start']} to {t['max_drawdown_end']}"
+            f"from {t['max_drawdown_start']} to {t['max_drawdown_end']}",
         ),
     ]
 
     for row in row_data:
-        table.add_row(
-            *row
-        )
+        table.add_row(*row)
 
     return table
 
@@ -475,19 +442,16 @@ def bot_config(client) -> str:
         "## Bot Info\n\n"
         f"**Bot Name**            : {config['bot_name']}  \n"
         f"**URL**                 : [{client.url}:{client.port}]({client.url}:{client.port})\n\n"
-
         f"**Version**             : {config['version']}  \n"
         f"**Runmode**             : {config['runmode']}  \n"
         f"**Force Entry**         : {config['force_entry_enable']}  \n"
         f"**Position Adjustment** : {config['position_adjustment_enable']}\n\n"
-
         f"## Strategy Info\n\n"
         f"**Strategy**            : {config['strategy']}  \n"
         f"**Strategy Version**    : {config['strategy_version']}  \n"
         f"**Timeframe**           : {config['timeframe']}  \n"
         f"**Stoploss**            : {config['stoploss']}  \n"
         f"**Max Open Trades**     : {config['max_open_trades']}\n\n"
-
         f"## Market Config\n\n"
         f"**Exchange**            : {config['exchange']}  \n"
         f"**Trading Mode**        : {config['trading_mode']}  \n"

@@ -4,6 +4,7 @@ import webbrowser
 from textual import on
 from textual.widgets import Markdown
 
+
 class LinkableMarkdown(Markdown):
 
     @on(Markdown.LinkClicked)

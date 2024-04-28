@@ -40,12 +40,10 @@ dependencies = [
     'freqtrade-client',
 ]
 
-
 [project.urls]
-Homepage = "https://github.com/freqtrade/freqtrade"
+Homepage = "https://github.com/freqtrade/ftui"
 Documentation = "https://freqtrade.io"
-"Bug Tracker" = "https://github.com/freqtrade/freqtrade/issues"
-
+"Bug Tracker" = "https://github.com/freqtrade/ftui/issues"
 
 [project.scripts]
 ftui = "ftui.ftui:main"
@@ -57,3 +55,45 @@ exclude = ["tests", "tests.*"]
 
 [tool.hatch.version]
 path = "ftui/__init__.py"
+
+[tool.black]
+line-length = 100
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  # Exclude vendor directory
+  | vendor
+)
+'''
+
+[tool.isort]
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = [
+  "TID",    # flake8-tidy-imports
+  # "EXE",  # flake8-executable
+  "YTT",    # flake8-2020
+  # "DTZ",  # flake8-datetimez
+  # "RSE",  # flake8-raise
+  # "TCH",  # flake8-type-checking
+  # "PTH",  # flake8-use-pathlib
+]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = "E203"

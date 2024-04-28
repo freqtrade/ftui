@@ -17,10 +17,27 @@ from textual.containers import Container, Horizontal, Vertical
 from textual_plotext import PlotextPlot
 from textual.screen import Screen, ModalScreen
 from textual.widgets import (
-    Button, Checkbox, Collapsible, DataTable, Digits,
-    Footer, Header, Input, Label, ListView, ListItem,
-    Log, Markdown, MarkdownViewer, ProgressBar, Rule,
-    Select, Sparkline, Static, TabbedContent, TabPane
+    Button,
+    Checkbox,
+    Collapsible,
+    DataTable,
+    Digits,
+    Footer,
+    Header,
+    Input,
+    Label,
+    ListView,
+    ListItem,
+    Log,
+    Markdown,
+    MarkdownViewer,
+    ProgressBar,
+    Rule,
+    Select,
+    Sparkline,
+    Static,
+    TabbedContent,
+    TabPane,
 )
 from textual.worker import get_current_worker
 
@@ -45,68 +62,41 @@ class DashboardScreen(Screen):
         with Container(id="above"):
             with Container(id="all-open-profit"):
                 yield Label("Open")
-                yield Digits(
-                    id="all-bot-summary-open-profit"
-                )
+                yield Digits(id="all-bot-summary-open-profit")
 
             with Container(id="all-closed-profit"):
                 yield Label("Closed")
-                yield Digits(
-                    id="all-bot-summary-closed-profit"
-                )
+                yield Digits(id="all-bot-summary-closed-profit")
 
             with Container(id="all-daily-profit"):
                 yield Label("Daily")
-                yield Digits(
-                    id="all-bot-summary-daily-profit"
-                )
+                yield Digits(id="all-bot-summary-daily-profit")
                 yield Static(id="yesterday-profit")
 
             with Container(id="all-weekly-profit"):
                 yield Label("Weekly")
-                yield Digits(
-                    id="all-bot-summary-weekly-profit"
-                )
+                yield Digits(id="all-bot-summary-weekly-profit")
                 yield Static(id="last-week-profit")
 
             with Container(id="all-monthly-profit"):
                 yield Label("Monthly")
-                yield Digits(
-                    id="all-bot-summary-monthly-profit"
-                )
+                yield Digits(id="all-bot-summary-monthly-profit")
                 yield Static(id="last-month-profit")
 
         with Container(id="parent-container"):
             with Container(id="dash-container"):
                 with Container(id="dash-all-trade-summary"):
-                    yield Static(
-                        id="all-trade-summary-table"
-                    )
+                    yield Static(id="all-trade-summary-table")
 
                 with Container(id="dash-collapsibles"):
-                    with Collapsible(title="All Open Trades",
-                                     id="dsh-op-collap",
-                                     collapsed=False):
-                        yield Static(
-                            id="all-open-trades-table",
-                            classes="bg-static-default"
-                        )
+                    with Collapsible(title="All Open Trades", id="dsh-op-collap", collapsed=False):
+                        yield Static(id="all-open-trades-table", classes="bg-static-default")
 
-                    with Collapsible(title="All Closed Trades",
-                                     id="dsh-cl-collap",
-                                     collapsed=True):
-                        yield Static(
-                            id="dash-closed-profit",
-                            classes="bg-static-default"
-                        )
+                    with Collapsible(title="All Closed Trades", id="dsh-cl-collap", collapsed=True):
+                        yield Static(id="dash-closed-profit", classes="bg-static-default")
 
-                    with Collapsible(title="Cumulative Profit",
-                                     id="dsh-cp-collap",
-                                     collapsed=True):
-                        yield PlotextPlot(
-                            id="dash-cumprof-profit",
-                            classes="bg-static-default"
-                        )
+                    with Collapsible(title="Cumulative Profit", id="dsh-cp-collap", collapsed=True):
+                        yield PlotextPlot(id="dash-cumprof-profit", classes="bg-static-default")
 
                     # with Collapsible(title="Daily Trade Summary",
                     #                  id="dsh-dt-collap",
@@ -125,14 +115,10 @@ class DashboardScreen(Screen):
         for sd in summary_digits:
             sd.loading = True
 
-        update_one_sec_render = self.set_interval(
-            1, self.update_per_sec
-        )
+        update_one_sec_render = self.set_interval(1, self.update_per_sec)
         self.timers["1sec"] = update_one_sec_render
 
-        update_five_sec_render = self.set_interval(
-            5, self.update_per_five_sec
-        )
+        update_five_sec_render = self.set_interval(5, self.update_per_five_sec)
         self.timers["5sec"] = update_five_sec_render
 
     async def update_per_sec(self):
@@ -157,7 +143,7 @@ class DashboardScreen(Screen):
         row_data = []
 
         for idx, v in data.iterrows():
-            #bot_name = v['Bot']
+            # bot_name = v['Bot']
 
             render_data = (
                 # f"[@click=app.switch_to_bot('{bot_name}')]{bot_name}[/]",
@@ -173,10 +159,10 @@ class DashboardScreen(Screen):
             render_data = render_data + (
                 f"{v['Open Rate']}",
                 f"{v['Current Rate']}",
-                fth.red_or_green(float(v['Stop %'])),
-                fth.red_or_green(float(v['Profit %']), justify='right'),
-                fth.red_or_green(float(v['Profit']), justify='right'),
-                str(v["Dur."]).split('.')[0].replace('0 days ', ''),
+                fth.red_or_green(float(v["Stop %"])),
+                fth.red_or_green(float(v["Profit %"]), justify="right"),
+                fth.red_or_green(float(v["Profit"]), justify="right"),
+                str(v["Dur."]).split(".")[0].replace("0 days ", ""),
                 f"{v['S/L']}",
                 f"{v['Entry']}",
             )
@@ -187,20 +173,22 @@ class DashboardScreen(Screen):
 
     def _render_closed_trade_data(self, data):
         row_data = []
-        data = data.sort_values(by='Close Date', ascending=False)
+        data = data.sort_values(by="Close Date", ascending=False)
 
         for idx, v in data.iterrows():
-            row_data.append((
-                f"{v['Bot']}",
-                f"{v['ID']}",
-                f"{v['Pair']}",
-                fth.red_or_green(float(v['Profit %']), justify='right'),
-                fth.red_or_green(float(v['Profit']), justify='right'),
-                f"[cyan]{str(v['Open Date']).split('+')[0]}",
-                str(v['Dur.']).split('.')[0].replace('0 days ', ''),
-                f"{v['Entry']}",
-                f"{v['Exit']}",
-            ))
+            row_data.append(
+                (
+                    f"{v['Bot']}",
+                    f"{v['ID']}",
+                    f"{v['Pair']}",
+                    fth.red_or_green(float(v["Profit %"]), justify="right"),
+                    fth.red_or_green(float(v["Profit"]), justify="right"),
+                    f"[cyan]{str(v['Open Date']).split('+')[0]}",
+                    str(v["Dur."]).split(".")[0].replace("0 days ", ""),
+                    f"{v['Entry']}",
+                    f"{v['Exit']}",
+                )
+            )
 
         return row_data
 
@@ -224,27 +212,27 @@ class DashboardScreen(Screen):
 
             tot_profit = 0
             if not open_data.empty:
-                tot_profit = round(open_data['Profit'].sum(), 2)
+                tot_profit = round(open_data["Profit"].sum(), 2)
 
             pcc = 0
             if not closed_data.empty:
-                pcc = round(closed_data['Profit'].sum(), 2)
+                pcc = round(closed_data["Profit"].sum(), 2)
 
             closed_profit = closed_profit + pcc
             open_profit = open_profit + tot_profit
 
             d = cl.get_daily_profit(days=2)
-            if d is not None and "data" in d and d['data']:
-                daily_profit = daily_profit + d['data'][0]['abs_profit']
-                yesterday_profit = d['data'][1]['abs_profit']
+            if d is not None and "data" in d and d["data"]:
+                daily_profit = daily_profit + d["data"][0]["abs_profit"]
+                yesterday_profit = d["data"][1]["abs_profit"]
             w = cl.get_weekly_profit(weeks=2)
-            if w is not None and "data" in w and w['data']:
-                weekly_profit = weekly_profit + w['data'][0]['abs_profit']
-                last_week_profit = w['data'][1]['abs_profit']
+            if w is not None and "data" in w and w["data"]:
+                weekly_profit = weekly_profit + w["data"][0]["abs_profit"]
+                last_week_profit = w["data"][1]["abs_profit"]
             m = cl.get_monthly_profit(months=2)
-            if m is not None and "data" in m and m['data']:
-                monthly_profit = monthly_profit + m['data'][0]['abs_profit']
-                last_month_profit = m['data'][1]['abs_profit']
+            if m is not None and "data" in m and m["data"]:
+                monthly_profit = monthly_profit + m["data"][0]["abs_profit"]
+                last_month_profit = m["data"][1]["abs_profit"]
 
         cps = round(closed_profit, 2)
         ops = round(open_profit, 2)
@@ -268,15 +256,15 @@ class DashboardScreen(Screen):
             self.app.call_from_thread(dpsd.update, f"{dps}")
             self.app.call_from_thread(wpsd.update, f"{wps}")
             self.app.call_from_thread(mpsd.update, f"{mps}")
-            self.app.call_from_thread(ypsd.update,
-                                      Text(f"{round(yesterday_profit, 2)}",
-                                           justify="center"))
-            self.app.call_from_thread(lwpsd.update,
-                                      Text(f"{round(last_week_profit, 2)}",
-                                           justify="center"))
-            self.app.call_from_thread(lmpsd.update,
-                                      Text(f"{round(last_month_profit, 2)}",
-                                           justify="center"))
+            self.app.call_from_thread(
+                ypsd.update, Text(f"{round(yesterday_profit, 2)}", justify="center")
+            )
+            self.app.call_from_thread(
+                lwpsd.update, Text(f"{round(last_week_profit, 2)}", justify="center")
+            )
+            self.app.call_from_thread(
+                lmpsd.update, Text(f"{round(last_month_profit, 2)}", justify="center")
+            )
 
         fth.set_red_green_widget_colour(opsd, ops)
         fth.set_red_green_widget_colour(cpsd, cps)
@@ -300,8 +288,8 @@ class DashboardScreen(Screen):
 
         all_open_df = pd.DataFrame()
         for n, cl in client_dict.items():
-            if cl.name in client_dfs and 'op_data' in client_dfs[cl.name]:
-                data = client_dfs[cl.name]['op_data'].copy()
+            if cl.name in client_dfs and "op_data" in client_dfs[cl.name]:
+                data = client_dfs[cl.name]["op_data"].copy()
                 if not data.empty:
                     all_open_df = pd.concat([all_open_df, data])
 
@@ -309,8 +297,7 @@ class DashboardScreen(Screen):
 
         dt = self.query_one("#all-open-trades-table")
         table = fth.dash_open_trades_table(
-            row_data,
-            trading_mode=cl.get_client_config().get('trading_mode')
+            row_data, trading_mode=cl.get_client_config().get("trading_mode")
         )
 
         worker = get_current_worker()
@@ -325,8 +312,8 @@ class DashboardScreen(Screen):
 
         all_closed_df = pd.DataFrame()
         for n, cl in client_dict.items():
-            if cl.name in client_dfs and 'cl_data' in client_dfs[cl.name]:
-                data = client_dfs[cl.name]['cl_data'].copy()
+            if cl.name in client_dfs and "cl_data" in client_dfs[cl.name]:
+                data = client_dfs[cl.name]["cl_data"].copy()
                 all_closed_df = pd.concat([all_closed_df, data[:num_closed_trades]])
 
         row_data = self._render_closed_trade_data(all_closed_df)
@@ -366,11 +353,11 @@ class DashboardScreen(Screen):
             tpl = []
 
             if not open_data.empty:
-                open_profit = round(open_data['Profit'].sum(), 2)
+                open_profit = round(open_data["Profit"].sum(), 2)
 
-            if 'Profit' in closed_data.columns:
-                tpw = closed_data.loc[closed_data['Profit'] >= 0, 'Profit']
-                tpl = closed_data.loc[closed_data['Profit'] < 0, 'Profit']
+            if "Profit" in closed_data.columns:
+                tpw = closed_data.loc[closed_data["Profit"] >= 0, "Profit"]
+                tpl = closed_data.loc[closed_data["Profit"] < 0, "Profit"]
 
             if len(tpw) > 0:
                 mean_prof_w = round(tpw.mean(), 2)
@@ -387,51 +374,55 @@ class DashboardScreen(Screen):
                 winrate = (len(tpw) / (len(tpw) + len(tpl))) * 100
                 loserate = 100 - winrate
 
-            expectancy_ratio = float('inf')
+            expectancy_ratio = float("inf")
             if abs(mean_prof_l) > 0:
                 expectancy_ratio = ((1 + (mean_prof_w / abs(mean_prof_l))) * (winrate / 100)) - 1
 
-            expectancy = ((winrate/100) * mean_prof_w) - ((loserate/100) * mean_prof_l)
+            expectancy = ((winrate / 100) * mean_prof_w) - ((loserate / 100) * mean_prof_l)
 
             t = cl.get_total_profit()
             if t is None:
                 return []
 
-            pcc = round(float(t['profit_closed_coin']), 2)
-            # coin = stake_coin
-            # coin = t['best_pair'].split('/')[1]
+            pcc = round(float(t["profit_closed_coin"]), 2)
             bot_start_date = datetime.strptime(
                 f"{t['bot_start_date']}+00:00", self.app.TZFMT
             ).date()
 
             all_open_profit = all_open_profit + open_profit
             all_profit = all_profit + pcc
-            all_wins = all_wins + t['winning_trades']
-            all_losses = all_losses + t['losing_trades']
+            all_wins = all_wins + t["winning_trades"]
+            all_losses = all_losses + t["losing_trades"]
 
             trade_cnt_str = (
                 f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}"
                 f"[white]/[magenta]{t['closed_trade_count']}"
             )
 
-            row_data.append((
-                f"{n}",
-                f"{bot_start_date}",
-                trade_cnt_str,
-                fth.red_or_green(round(open_profit, 2), justify="right"),
-                f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
-                f"[cyan]{round(winrate, 1)}",
-                f"[magenta]{round(expectancy, 2)}",
-                fth.red_or_green(round(expectancy_ratio, 2)),
-                fth.red_or_green(round(median_win, 2), justify="right"), #f"[green]{median_win}",
-                fth.red_or_green(round(median_loss, 2), justify="left"), #f"[red]{median_loss}",
-                fth.red_or_green(pcc, justify="right")
-            ))
+            row_data.append(
+                (
+                    f"{n}",
+                    f"{bot_start_date}",
+                    trade_cnt_str,
+                    fth.red_or_green(round(open_profit, 2), justify="right"),
+                    f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
+                    f"[cyan]{round(winrate, 1)}",
+                    f"[magenta]{round(expectancy, 2)}",
+                    fth.red_or_green(round(expectancy_ratio, 2)),
+                    fth.red_or_green(
+                        round(median_win, 2), justify="right"
+                    ),  # f"[green]{median_win}",
+                    fth.red_or_green(
+                        round(median_loss, 2), justify="left"
+                    ),  # f"[red]{median_loss}",
+                    fth.red_or_green(pcc, justify="right"),
+                )
+            )
 
         footer = {
             "all_open_profit": fth.red_or_green(round(all_open_profit, 2), justify="right"),
             "num_wins_losses": f"[green]{all_wins}/[red]{all_losses}",
-            "all_total_profit": fth.red_or_green(round(all_profit, 2), justify="right")
+            "all_total_profit": fth.red_or_green(round(all_profit, 2), justify="right"),
         }
 
         dt = self.query_one("#all-trade-summary-table")
@@ -449,10 +440,10 @@ class DashboardScreen(Screen):
         client_dfs = self.app.client_dfs
 
         all_cum_data = pd.DataFrame()
-        if 'all_closed' in client_dfs:
-            all_cum_data = fth.dash_cumulative_profit_plot_data(client_dfs['all_closed'])
+        if "all_closed" in client_dfs:
+            all_cum_data = fth.dash_cumulative_profit_plot_data(client_dfs["all_closed"])
 
-            if 'plot_cumprof' in all_cum_data.columns:
+            if "plot_cumprof" in all_cum_data.columns:
                 chart_container = self.query_one("#dash-cumprof-profit")
                 cplt = chart_container.plt
                 dfmt = "Y-m-d"
@@ -462,9 +453,11 @@ class DashboardScreen(Screen):
 
                 dates = cplt.datetimes_to_string(all_cum_data.index)
 
-                cplt.plot(dates, all_cum_data['plot_cumprof'].values, color="orange")
-                cplt.ylim(all_cum_data['plot_cumprof'].min() * 0.99,
-                          all_cum_data['plot_cumprof'].max() * 1.01)
+                cplt.plot(dates, all_cum_data["plot_cumprof"].values, color="orange")
+                cplt.ylim(
+                    all_cum_data["plot_cumprof"].min() * 0.99,
+                    all_cum_data["plot_cumprof"].max() * 1.01,
+                )
                 cplt.ylabel("Profit")
 
                 worker = get_current_worker()
@@ -524,71 +517,42 @@ class MainBotScreen(Screen):
             with Container(id="right"):
                 with Container(id="trades-summary"):
                     yield Static("Select a bot from the client list...", id="sel-bot-title")
-                    yield Static(
-                        id="trades-summary-table",
-                        classes="bg-static-default"
-                    )
+                    yield Static(id="trades-summary-table", classes="bg-static-default")
 
                 with Container(id="bot-chart-container"):
-                    with Collapsible(title="Candlestick Chart",
-                                     id="bot-chrt-collap",
-                                     collapsed=False):
+                    with Collapsible(
+                        title="Candlestick Chart", id="bot-chrt-collap", collapsed=False
+                    ):
                         with Horizontal(id="bot-chart-header"):
                             yield Button(
-                                "Refresh",
-                                id="bot-refresh-chart-button",
-                                variant="success"
+                                "Refresh", id="bot-refresh-chart-button", variant="success"
                             )
 
-                        yield ListView(
-                            id="whitelist",
-                            classes="bg-static-default"
-                        )
-                        yield PlotextPlot(
-                            id="bot-chart",
-                            classes="bg-static-default"
-                        )
+                        yield ListView(id="whitelist", classes="bg-static-default")
+                        yield PlotextPlot(id="bot-chart", classes="bg-static-default")
 
                 with TabbedContent(initial="open-trades-tab"):
 
                     with TabPane("Open Trades", id="open-trades-tab"):
-                        yield Static(
-                            id="open-trades-table",
-                            classes="bg-static-default"
-                        )
+                        yield Static(id="open-trades-table", classes="bg-static-default")
 
                     with TabPane("Closed Trades", id="closed-trades-tab"):
-                        yield Static(
-                            id="closed-trades-table",
-                            classes="bg-static-default"
-                        )
+                        yield Static(id="closed-trades-table", classes="bg-static-default")
 
                     with TabPane("Tag Summary", id="tag-summary-tab"):
-                        yield Static(
-                            id="tag-summary-table",
-                            classes="bg-static-default"
-                        )
+                        yield Static(id="tag-summary-table", classes="bg-static-default")
 
                     with TabPane("Performance", id="perf-summary-tab"):
-                        yield Static(
-                            id="perf-summary-table",
-                            classes="bg-static-default"
-                        )
+                        yield Static(id="perf-summary-table", classes="bg-static-default")
 
                     with TabPane("General", id="general-tab"):
                         with Horizontal(id="bot-config-container"):
                             with Vertical(id="bot-general-vert"):
-                                yield LinkableMarkdown(
-                                    id="bot-general-markdown"
-                                )
+                                yield LinkableMarkdown(id="bot-general-markdown")
 
-                                yield Static(
-                                    id="bot-general-table"
-                                )
+                                yield Static(id="bot-general-table")
 
-                            yield LinkableMarkdown(
-                                id="bot-config-markdown"
-                            )
+                            yield LinkableMarkdown(id="bot-config-markdown")
 
                     with TabPane("Logs", id="logs-tab"):
                         yield Log(id="log")
@@ -597,16 +561,12 @@ class MainBotScreen(Screen):
                         with Container(id="bot-sysinfo-container"):
                             with Horizontal():
                                 yield Label("CPU: ")
-                                yield Sparkline(
-                                    id="sysinfo-summary-cpu"
-                                )
+                                yield Sparkline(id="sysinfo-summary-cpu")
                                 yield Label(id="sysinfo-cpu-text")
                             with Horizontal():
                                 yield Label("RAM: ")
                                 yield ProgressBar(
-                                    id="sysinfo-progress-ram",
-                                    total=100,
-                                    show_eta=False
+                                    id="sysinfo-progress-ram", total=100, show_eta=False
                                 )
 
                     if self.app.debug_mode:
@@ -619,25 +579,19 @@ class MainBotScreen(Screen):
     def on_mount(self) -> None:
         self.update_select_options()
 
-        update_one_sec_render = self.set_interval(
-            1, self.update_per_sec
-        )
+        update_one_sec_render = self.set_interval(1, self.update_per_sec)
         self.timers["1sec"] = update_one_sec_render
 
-        update_five_sec_render = self.set_interval(
-            5, self.update_per_five_sec
-        )
+        update_five_sec_render = self.set_interval(5, self.update_per_five_sec)
         self.timers["5sec"] = update_five_sec_render
 
-        update_one_min_render = self.set_interval(
-            60, self.update_per_one_min
-        )
+        update_one_min_render = self.set_interval(60, self.update_per_one_min)
         self.timers["1min"] = update_one_min_render
 
     async def update_per_sec(self):
         bot_id = self._get_bot_id_from_client_list()
 
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             self.update_trades_summary(bot_id)
 
             tab_id = self._get_active_tab_id()
@@ -647,14 +601,14 @@ class MainBotScreen(Screen):
     async def update_per_five_sec(self):
         bot_id = self._get_bot_id_from_client_list()
 
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             tab_id = self._get_active_tab_id()
             if tab_id != "open-trades-tab" and tab_id in self.TAB_FUNC_MAP:
                 getattr(self, self.TAB_FUNC_MAP[tab_id])(tab_id, bot_id)
 
     async def update_per_one_min(self):
         bot_id = self._get_bot_id_from_client_list()
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             self.update_chart(bot_id, pair=self.prev_chart_pair)
             self.update_whitelist(bot_id)
 
@@ -679,7 +633,7 @@ class MainBotScreen(Screen):
         tab_id = event.tab.id
         bot_id = self._get_bot_id_from_client_list()
 
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             if tab_id in self.TAB_FUNC_MAP:
                 getattr(self, self.TAB_FUNC_MAP[tab_id])(tab_id, bot_id)
 
@@ -704,7 +658,7 @@ class MainBotScreen(Screen):
 
         bot_id = str(event.value)
 
-        if bot_id != 'Select.BLANK':
+        if bot_id != "Select.BLANK":
             self.query_one("#sel-bot-title").update(bot_id)
             self.update_trades_summary(bot_id)
 
@@ -778,11 +732,11 @@ class MainBotScreen(Screen):
         open_profit = 0
 
         if not open_data.empty:
-            open_profit = round(open_data['Profit'].sum(), 2)
+            open_profit = round(open_data["Profit"].sum(), 2)
 
-        if 'Profit' in closed_data.columns:
-            tpw = closed_data.loc[closed_data['Profit'] >= 0, 'Profit']
-            tpl = closed_data.loc[closed_data['Profit'] < 0, 'Profit']
+        if "Profit" in closed_data.columns:
+            tpw = closed_data.loc[closed_data["Profit"] >= 0, "Profit"]
+            tpl = closed_data.loc[closed_data["Profit"] < 0, "Profit"]
 
         if len(tpw) > 0:
             mean_prof_w = round(tpw.mean(), 2)
@@ -799,17 +753,17 @@ class MainBotScreen(Screen):
             winrate = (len(tpw) / (len(tpw) + len(tpl))) * 100
             loserate = 100 - winrate
 
-        expectancy_ratio = float('inf')
+        expectancy_ratio = float("inf")
         if abs(mean_prof_l) > 0:
             expectancy_ratio = ((1 + (mean_prof_w / abs(mean_prof_l))) * (winrate / 100)) - 1
 
-        expectancy = ((winrate/100) * mean_prof_w) - ((loserate/100) * mean_prof_l)
+        expectancy = ((winrate / 100) * mean_prof_w) - ((loserate / 100) * mean_prof_l)
 
         t = cl.get_total_profit()
         if t is None:
             return []
 
-        pcc = round(float(t['profit_closed_coin']), 2)
+        pcc = round(float(t["profit_closed_coin"]), 2)
         bot_start_date = datetime.strptime(f"{t['bot_start_date']}+00:00", self.app.TZFMT).date()
 
         trade_cnt_str = (
@@ -817,18 +771,20 @@ class MainBotScreen(Screen):
             f"[white]/[magenta]{t['closed_trade_count']}"
         )
 
-        row_data.append((
-            f"{bot_start_date}",
-            trade_cnt_str,
-            fth.red_or_green(round(open_profit, 2), justify="right"),
-            f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
-            f"[cyan]{round(winrate, 1)}",
-            f"[magenta]{round(expectancy, 2)}",
-            fth.red_or_green(round(expectancy_ratio, 2), justify="right"),
-            f"[green]{median_win}",
-            f"[red]{median_loss}",
-            fth.red_or_green(pcc, justify="right")
-        ))
+        row_data.append(
+            (
+                f"{bot_start_date}",
+                trade_cnt_str,
+                fth.red_or_green(round(open_profit, 2), justify="right"),
+                f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
+                f"[cyan]{round(winrate, 1)}",
+                f"[magenta]{round(expectancy, 2)}",
+                fth.red_or_green(round(expectancy_ratio, 2), justify="right"),
+                f"[green]{median_win}",
+                f"[red]{median_loss}",
+                fth.red_or_green(pcc, justify="right"),
+            )
+        )
 
         dt = self.query_one("#trades-summary-table")
         table = fth.bot_trades_summary_table(row_data)
@@ -858,25 +814,21 @@ class MainBotScreen(Screen):
         for t in open_trades:
             ttime = datetime.strptime(f"{t['open_date']}+00:00", self.app.TZFMT)
             open_orders = (
-                t['has_open_orders']
-                if 'has_open_orders' in t
-                else (t['open_order_id'] is not None)
+                t["has_open_orders"] if "has_open_orders" in t else (t["open_order_id"] is not None)
             )
 
-            suff = ''
-            if (open_orders and t['close_rate_requested'] is None):
-                suff = ' *'
+            suff = ""
+            if open_orders and t["close_rate_requested"] is None:
+                suff = " *"
 
-            if (t['close_rate_requested'] is not None):
-                suff = ' **'
+            if t["close_rate_requested"] is not None:
+                suff = " **"
 
             pairstr = f"{t['pair']}{suff}"
-            rpfta = round(float(t['profit_abs']), 2)
-            t_dir = "S" if t['is_short'] else "L"
+            rpfta = round(float(t["profit_abs"]), 2)
+            t_dir = "S" if t["is_short"] else "L"
             stop_profit = round(
-                (
-                    (t['stop_loss_abs'] - t['open_rate']) / t['stop_loss_abs']
-                ) * 100, 2
+                ((t["stop_loss_abs"] - t["open_rate"]) / t["stop_loss_abs"]) * 100, 2
             )
 
             stp_txt = (
@@ -891,15 +843,15 @@ class MainBotScreen(Screen):
                 f"{round(t['stake_amount'], 3)}",
             )
 
-            if ftuic.get_client_config().get('trading_mode') != "spot":
+            if ftuic.get_client_config().get("trading_mode") != "spot":
                 render_data = render_data + (f"{t['leverage']}")
 
             render_data = render_data + (
                 f"{t['open_rate']}",
                 f"{t['current_rate']}",
                 stp_txt,
-                fth.red_or_green(float(t['profit_pct']), justify='right'),
-                fth.red_or_green(rpfta, justify='right'),
+                fth.red_or_green(float(t["profit_pct"]), justify="right"),
+                fth.red_or_green(rpfta, justify="right"),
                 f"{str(current_time-ttime).split('.')[0]}",
                 f"{t_dir}",
                 f"{t['enter_tag']}" if "enter_tag" in t else "",
@@ -909,8 +861,7 @@ class MainBotScreen(Screen):
 
         dt = self.query_one("#open-trades-table")
         table = fth.bot_open_trades_table(
-            row_data,
-            trading_mode=ftuic.get_client_config().get('trading_mode')
+            row_data, trading_mode=ftuic.get_client_config().get("trading_mode")
         )
 
         worker = get_current_worker()
@@ -933,8 +884,8 @@ class MainBotScreen(Screen):
             # ("ID", "Pair", "Profit %", "Profit", "Open Date", "Dur.", "Entry", "Exit"),
         ]
 
-        if ftuic.name in client_dfs and 'cl_data' in client_dfs[ftuic.name]:
-            trade_data = client_dfs[ftuic.name]['cl_data']
+        if ftuic.name in client_dfs and "cl_data" in client_dfs[ftuic.name]:
+            trade_data = client_dfs[ftuic.name]["cl_data"]
             for idx, v in trade_data.iterrows():
                 render_data = (
                     # Text.styled(str(v['ID']), Style(
@@ -946,14 +897,14 @@ class MainBotScreen(Screen):
                     f"{v['Stake Amount']}",
                 )
 
-                if ftuic.get_client_config().get('trading_mode') != "spot":
+                if ftuic.get_client_config().get("trading_mode") != "spot":
                     render_data = render_data + (f"{v['Leverage']}")
 
                 render_data = render_data + (
-                    fth.red_or_green(float(v['Profit %']), justify='right'),
-                    fth.red_or_green(float(v['Profit']), justify='right'),
+                    fth.red_or_green(float(v["Profit %"]), justify="right"),
+                    fth.red_or_green(float(v["Profit"]), justify="right"),
                     f"[cyan]{str(v['Open Date']).split('+')[0]}",
-                    str(v['Dur.']).split('.')[0].replace('0 days ', ''),
+                    str(v["Dur."]).split(".")[0].replace("0 days ", ""),
                     f"{v['Entry']}",
                     f"{v['Exit']}",
                 )
@@ -962,8 +913,7 @@ class MainBotScreen(Screen):
 
         dt = self.query_one("#closed-trades-table")
         table = fth.bot_closed_trades_table(
-            row_data,
-            trading_mode=ftuic.get_client_config().get('trading_mode')
+            row_data, trading_mode=ftuic.get_client_config().get("trading_mode")
         )
 
         worker = get_current_worker()
@@ -987,17 +937,19 @@ class MainBotScreen(Screen):
         ]
 
         tag_data = fth.get_tag_dataframe_data(ftuic, client_dfs)
-        tag_data = tag_data.sort_values(by='Profit', ascending=False)
+        tag_data = tag_data.sort_values(by="Profit", ascending=False)
 
         for idx, v in tag_data.iterrows():
-            row_data.append((
-                f"{v['Tag']}",
-                f"[green]{v['# Win']}/[red]{v['# Loss']}",
-                f"{v['Avg Dur.']}",
-                f"{v['Avg Win Dur.']}",
-                f"{v['Avg Loss Dur.']}",
-                fth.red_or_green(round(float(v['Profit']), 2), justify='right'),
-            ))
+            row_data.append(
+                (
+                    f"{v['Tag']}",
+                    f"[green]{v['# Win']}/[red]{v['# Loss']}",
+                    f"{v['Avg Dur.']}",
+                    f"{v['Avg Win Dur.']}",
+                    f"{v['Avg Loss Dur.']}",
+                    fth.red_or_green(round(float(v["Profit"]), 2), justify="right"),
+                )
+            )
 
         dt = self.query_one("#tag-summary-table")
         table = fth.bot_tag_summary_table(row_data)
@@ -1020,7 +972,7 @@ class MainBotScreen(Screen):
         if not open_data.empty:
             if pair is None:
                 if self.prev_chart_pair is None:
-                    pair = open_data['Pair'].iloc[0]
+                    pair = open_data["Pair"].iloc[0]
                     self.prev_chart_pair = pair
                 pair = self.prev_chart_pair
             else:
@@ -1033,7 +985,7 @@ class MainBotScreen(Screen):
                     closed_data = fth.get_closed_dataframe_data(cl, client_dfs)
 
                     if not closed_data.empty:
-                        pair = closed_data['Pair'].iloc[0]
+                        pair = closed_data["Pair"].iloc[0]
                     else:
                         pair = f"BTC/{cl.get_client_config()['stake_currency']}"
                     self.prev_chart_pair = pair
@@ -1043,7 +995,7 @@ class MainBotScreen(Screen):
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data or refresh:
             chart_container.loading = True
-            data = cl.get_pair_dataframe(pair, limit=min(max(round(cw/2), 50), 200))
+            data = cl.get_pair_dataframe(pair, limit=min(max(round(cw / 2), 50), 200))
             if data is not None and not data.empty:
                 self.chart_data[ckey] = data[["date", "Open", "Close", "High", "Low"]]
                 self._render_chart(cl, pair, self.chart_data[ckey])
@@ -1061,9 +1013,9 @@ class MainBotScreen(Screen):
             # check if new data is available
             data = cl.get_pair_dataframe(pair, limit=1)
             if data is not None and not data.empty:
-                last_date = self.chart_data[ckey].iloc[-1]['date']
+                last_date = self.chart_data[ckey].iloc[-1]["date"]
                 new_data = data[["date", "Open", "Close", "High", "Low"]].loc[
-                    data['date'] > last_date
+                    data["date"] > last_date
                 ]
                 if not new_data.empty:
                     chart_container.loading = True
@@ -1095,17 +1047,17 @@ class MainBotScreen(Screen):
 
             dfmt = "Y-m-d H:M:S"
             cplt.date_form(dfmt)
-            data.rename(columns={'date': 'Date'}, inplace=True)
-            data.set_index(pd.DatetimeIndex(data['Date']), inplace=True)
-            data.drop(columns=['Date'], inplace=True)
+            data.rename(columns={"date": "Date"}, inplace=True)
+            data.set_index(pd.DatetimeIndex(data["Date"]), inplace=True)
+            data.drop(columns=["Date"], inplace=True)
             data.index = data.index.tz_localize(None)
 
             if len(data.index) > 0:
                 min_date = data.index.min()
                 max_date = data.index.max()
 
-                ymin = data['Low'].min()
-                ymax = data['High'].max()
+                ymin = data["Low"].min()
+                ymax = data["High"].max()
                 yrange = ymax - ymin
                 y_per_box = yrange / ch
 
@@ -1119,17 +1071,17 @@ class MainBotScreen(Screen):
                 ytick_labels = None
                 if ymax < 0.00001 or ymin < 0.00001:
                     print("Scaling up by 10000")
-                    data['Low'] = data['Low'] * 100000
-                    data['High'] = data['High'] * 100000
-                    data['Open'] = data['Open'] * 100000
-                    data['Close'] = data['Close'] * 100000
-                    ymin = data['Low'].min()
-                    ymax = data['High'].max()
+                    data["Low"] = data["Low"] * 100000
+                    data["High"] = data["High"] * 100000
+                    data["Open"] = data["Open"] * 100000
+                    data["Close"] = data["Close"] * 100000
+                    ymin = data["Low"].min()
+                    ymax = data["High"].max()
                     yrange = ymax - ymin
                     yticks = [i for i in np.linspace(ymin, ymax, 5)]
                     ytick_labels = [f"{i/100000:.6f}" for i in np.linspace(ymin, ymax, 5)]
 
-                cplt.ylim(ymin-y_per_box, ymax+y_per_box)
+                cplt.ylim(ymin - y_per_box, ymax + y_per_box)
                 if ytick_labels is not None:
                     cplt.yticks(yticks, ytick_labels)
 
@@ -1138,59 +1090,60 @@ class MainBotScreen(Screen):
                 # scatter
                 client_dfs = self.app.client_dfs
                 open_data = fth.get_open_dataframe_data(ftuic, client_dfs)
-                open_data = open_data[open_data['Pair'] == pair]
+                open_data = open_data[open_data["Pair"] == pair]
                 closed_data = fth.get_closed_dataframe_data(ftuic, client_dfs)
-                closed_data = closed_data[closed_data['Pair'] == pair]
+                closed_data = closed_data[closed_data["Pair"] == pair]
 
                 all_trades = pd.concat([open_data, closed_data])
 
                 if all_trades is not None and not all_trades.empty:
-                    all_trades['Open Date'] = pd.to_datetime(all_trades['Open Date']).dt.tz_localize(None)
-                    all_trades['Close Date'] = pd.to_datetime(all_trades['Close Date']).dt.tz_localize(None)
+                    all_trades["Open Date"] = pd.to_datetime(
+                        all_trades["Open Date"]
+                    ).dt.tz_localize(None)
+                    all_trades["Close Date"] = pd.to_datetime(
+                        all_trades["Close Date"]
+                    ).dt.tz_localize(None)
 
                     o_events = []
                     o_dates = []
                     c_events = []
                     c_dates = []
                     for idx, t in all_trades.iterrows():
-                        odate = t['Open Date']
+                        odate = t["Open Date"]
 
-                        trade_dir = t['S/L']
+                        trade_dir = t["S/L"]
                         open_text = f"Long {t['Profit %']}%"
-                        open_marker = '\u25b2'
+                        open_marker = "\u25b2"
 
-                        if trade_dir == 'S':
+                        if trade_dir == "S":
                             open_text = f"Short {t['Profit %']}%"
-                            open_marker = '\u25bc'
+                            open_marker = "\u25bc"
 
                         if odate < max_date:
-                            if odate> min_date:
-                                o_events.append(t['Open Rate'])
+                            if odate > min_date:
+                                o_events.append(t["Open Rate"])
                                 o_dates.append(odate.strftime(self.app.DFMT))
                                 cplt.text(
                                     open_text,
                                     x=odate.strftime(self.app.DFMT),
-                                    y=t['Open Rate']+(y_per_box*2),
-                                    alignment = 'left',
-                                    color = 'orange'
+                                    y=t["Open Rate"] + (y_per_box * 2),
+                                    alignment="left",
+                                    color="orange",
                                 )
 
                         if "Close Rate" in t:
-                            if t['Close Rate'] is not None and not pd.isna(t['Close Rate']):
-                                if t['Close Date'] > min_date:
-                                    c_events.append(t['Close Rate'])
-                                    c_dates.append(t['Close Date'].strftime(self.app.DFMT))
+                            if t["Close Rate"] is not None and not pd.isna(t["Close Rate"]):
+                                if t["Close Date"] > min_date:
+                                    c_events.append(t["Close Rate"])
+                                    c_dates.append(t["Close Date"].strftime(self.app.DFMT))
 
                     if len(o_dates) > 0 or len(c_dates) > 0:
-                        cplt.scatter(o_dates, o_events, marker=open_marker, color='blue')
-                        cplt.scatter(c_dates, c_events, marker='x', color='yellow')
+                        cplt.scatter(o_dates, o_events, marker=open_marker, color="blue")
+                        cplt.scatter(c_dates, c_events, marker="x", color="yellow")
 
                 xticks = [
-                    d.strftime(self.app.DFMT) for d in pd.date_range(
-                        start=min_date,
-                        end=max_date,
-                        periods=5
-                    )
+                    d.strftime(self.app.DFMT)
+                    for d in pd.date_range(start=min_date, end=max_date, periods=5)
                 ]
 
                 cplt.xticks(xticks)
@@ -1220,15 +1173,17 @@ class MainBotScreen(Screen):
         ]
 
         perf_data = fth.get_perf_dataframe_data(ftuic, client_dfs)
-        perf_data = perf_data.sort_values(by='Total Profit', ascending=False)
+        perf_data = perf_data.sort_values(by="Total Profit", ascending=False)
 
         for idx, v in perf_data.iterrows():
-            row_data.append((
-                f"{v['Pair']}",
-                f"{v['# Trades']}",
-                fth.red_or_green(float(v['Avg Profit %']), justify='right'),
-                fth.red_or_green(float(v['Total Profit']), justify='right'),
-            ))
+            row_data.append(
+                (
+                    f"{v['Pair']}",
+                    f"{v['# Trades']}",
+                    fth.red_or_green(float(v["Avg Profit %"]), justify="right"),
+                    fth.red_or_green(float(v["Total Profit"]), justify="right"),
+                )
+            )
 
         dt = self.query_one("#perf-summary-table")
         table = fth.bot_perf_summary_table(row_data)
@@ -1242,7 +1197,7 @@ class MainBotScreen(Screen):
     def update_general_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             cl = client_dict[bot_id]
 
             gdm = self.query_one("#bot-general-markdown")
@@ -1261,7 +1216,7 @@ class MainBotScreen(Screen):
     def update_logs_tab(self, tab_id, bot_id):
         client_dict = self.app.client_dict
 
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             cl = client_dict[bot_id]
 
             tab = self._get_tab(tab_id)
@@ -1277,7 +1232,7 @@ class MainBotScreen(Screen):
         client_dict = self.app.client_dict
 
         cl = client_dict[bot_id]
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             whitelist = cl.get_whitelist()
 
             wl = self.query_one("#whitelist")
@@ -1300,7 +1255,7 @@ class MainBotScreen(Screen):
         self.prev_chart_pair = pair
 
         bot_id = self._get_bot_id_from_client_list()
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             self.update_chart(bot_id, pair=pair)
 
     @on(Collapsible.Toggled)
@@ -1315,7 +1270,7 @@ class MainBotScreen(Screen):
                 child.loading = True
 
         bot_id = self._get_bot_id_from_client_list()
-        if bot_id is not None and bot_id != 'Select.BLANK':
+        if bot_id is not None and bot_id != "Select.BLANK":
             if collap.id in self.COLLAP_FUNC_MAP:
                 getattr(self, self.COLLAP_FUNC_MAP[collap.id])(bot_id)
         else:
@@ -1336,13 +1291,13 @@ class MainBotScreen(Screen):
         dtt = self.query_one("#sysinfo-cpu-text")
         dtp = self.query_one("#sysinfo-progress-ram")
 
-        if sysinfo is not None and 'cpu_pct' in sysinfo:
+        if sysinfo is not None and "cpu_pct" in sysinfo:
             worker = get_current_worker()
             if not worker.is_cancelled:
-                dtc.data = sysinfo['cpu_pct']
-                dtc.styles.width = len(sysinfo['cpu_pct'])
+                dtc.data = sysinfo["cpu_pct"]
+                dtc.styles.width = len(sysinfo["cpu_pct"])
                 dtt.update(f"{np.mean(sysinfo['cpu_pct']):>3.0f}%")
-                dtp.update(progress=sysinfo['ram_pct'])
+                dtp.update(progress=sysinfo["ram_pct"])
 
     def debug(self, msg):
         debuglog = self.query_one("#debug-log")
@@ -1405,11 +1360,10 @@ class SettingsScreen(Screen):
                         for server in s[setting]:
                             t = Checkbox(
                                 f"{server['name']} [{server['ip']}:{server['port']}]",
-                                server['enabled']
+                                server["enabled"],
                             )
                             c.mount(t)
                         settings_left.mount(c)
-
 
 
 class HelpScreen(Screen):
@@ -1449,9 +1403,7 @@ class HelpScreen(Screen):
         try:
             await self.markdown_viewer.load(self.help_file_path)
         except FileNotFoundError:
-            msg = (
-                f"Unable to load help file: {self.help_file_path!r}"
-            )
+            msg = f"Unable to load help file: {self.help_file_path!r}"
             self.notify(
                 msg,
                 title=f"Error:",
@@ -1503,7 +1455,6 @@ class TradeInfoScreen(BasicModal):
             with Container(id="trade-info-footer"):
                 yield Static("[Esc] to close")
 
-
     def build_trade_info(self, trade_info):
 
         main_text = (
@@ -1512,18 +1463,16 @@ class TradeInfoScreen(BasicModal):
             f"[b]Open Date    : {trade_info['open_date']}\n"
             f"[b]Entry Tag    : {trade_info['enter_tag']}\n"
             "[b]Stake        : "
-                f"{trade_info['stake_amount']} "
-                f"{trade_info['quote_currency']}\n"
+            f"{trade_info['stake_amount']} "
+            f"{trade_info['quote_currency']}\n"
             f"[b]Amount       : {trade_info['amount']}\n"
             f"[b]Open Rate    : {trade_info['open_rate']}\n"
         )
 
-        if trade_info['close_profit_abs'] is not None:
-            close_rate = trade_info['close_rate']
-            close_date = trade_info['close_date']
-            close_profit = (
-                f"{trade_info['close_profit_abs']} ({trade_info['close_profit_pct']}%)"
-            )
+        if trade_info["close_profit_abs"] is not None:
+            close_rate = trade_info["close_rate"]
+            close_date = trade_info["close_date"]
+            close_profit = f"{trade_info['close_profit_abs']} ({trade_info['close_profit_pct']}%)"
 
             main_text += (
                 f"[b]Close Rate   : {close_rate}\n"
@@ -1548,4 +1497,3 @@ class TradeInfoScreen(BasicModal):
         # three = Static(three_text, classes="box", id="three")
 
         return main, two
-

@@ -12,12 +12,12 @@ import freqtrade_client.ft_rest_client as ftrc
 
 logging.basicConfig(
     level=logging.WARNING,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("ftui_client")
 
 
-class FTUIClient():
+class FTUIClient:
 
     def __init__(self, name, url, port, username, password, config_path=None):
         self.name = name
@@ -37,19 +37,19 @@ class FTUIClient():
     def setup_client(self):
         if self.url is None and self.port is None:
             config = ftrc.load_config(self.config_path)
-            self.url = config.get('api_server', {}).get('listen_ip_address', '127.0.0.1')
-            self.port = config.get('api_server', {}).get('listen_port', '8080')
+            self.url = config.get("api_server", {}).get("listen_ip_address", "127.0.0.1")
+            self.port = config.get("api_server", {}).get("listen_port", "8080")
 
             if self.username is None and self.password is None:
-                self.username = config.get('api_server', {}).get('username')
-                self.password = config.get('api_server', {}).get('password')
+                self.username = config.get("api_server", {}).get("username")
+                self.password = config.get("api_server", {}).get("password")
         else:
             if self.config_path is not None:
                 config = ftrc.load_config(self.config_path)
 
                 if self.username is None and self.password is None:
-                    self.username = config.get('api_server', {}).get('username')
-                    self.password = config.get('api_server', {}).get('password')
+                    self.username = config.get("api_server", {}).get("username")
+                    self.password = config.get("api_server", {}).get("password")
 
         if self.name is None:
             self.name = f"{self.url}:{self.port}"
@@ -61,7 +61,7 @@ class FTUIClient():
         if client is not None:
             c = client.version()
             if c is not None:
-                if "detail" in c.keys() and (c["detail"] == 'Unauthorized'):
+                if "detail" in c.keys() and (c["detail"] == "Unauthorized"):
                     raise Exception(
                         f"Could not connect to bot [{self.url}:{self.port}]: Unauthorised"
                     )
@@ -80,11 +80,11 @@ class FTUIClient():
 
         self.rest_client = client
         current_config = self.get_client_config()
-        self.name = current_config.get('bot_name', self.name)
-        bot_state = current_config['state']
-        runmode = current_config['runmode']
-        strategy = current_config['strategy']
-        timeframe = current_config['timeframe']
+        self.name = current_config.get("bot_name", self.name)
+        bot_state = current_config["state"]
+        runmode = current_config["runmode"]
+        strategy = current_config["strategy"]
+        timeframe = current_config["timeframe"]
 
         self.config = current_config
 
@@ -112,24 +112,20 @@ class FTUIClient():
 
     def get_pair_dataframe(self, pair, limit=200) -> pd.DataFrame:
         cl = self.rest_client
-        candles = cl.pair_candles(pair,
-                                  timeframe=self.get_client_config()['timeframe'],
-                                  limit=limit)
+        candles = cl.pair_candles(
+            pair, timeframe=self.get_client_config()["timeframe"], limit=limit
+        )
 
         if candles is not None:
-            cols = candles['columns']
-            data = candles['data']
+            cols = candles["columns"]
+            data = candles["data"]
 
             if cols and data:
                 df = pd.DataFrame(data, columns=cols)
                 df.rename(
-                    columns={
-                        'open': 'Open',
-                        'close': 'Close',
-                        'high': 'High',
-                        'low': 'Low'
-                    },
-                    inplace=True)
+                    columns={"open": "Open", "close": "Close", "high": "High", "low": "Low"},
+                    inplace=True,
+                )
                 return df
 
         return None
@@ -147,7 +143,7 @@ class FTUIClient():
         ps = cl.profit()
 
         if ps is not None:
-            num_all_closed_trades = int(ps['closed_trade_count'])
+            num_all_closed_trades = int(ps["closed_trade_count"])
 
             if num_all_closed_trades != self.prev_closed_trade_count:
                 m, r = divmod(int(num_all_closed_trades), 500)
@@ -156,34 +152,34 @@ class FTUIClient():
                 if m > 1:
                     # get last 500
                     cltrades = cl.trades()
-                    if cltrades is not None and 'trades' in cltrades:
-                        clt = cltrades['trades']
+                    if cltrades is not None and "trades" in cltrades:
+                        clt = cltrades["trades"]
                         if clt is not None and len(clt) > 0:
                             trades.extend(clt)
 
-                    for i in range(1, m+1):
+                    for i in range(1, m + 1):
                         cltrades = cl.trades(offset=(500 * i))
-                        if cltrades is not None and 'trades' in cltrades:
-                            clt = cltrades['trades']
+                        if cltrades is not None and "trades" in cltrades:
+                            clt = cltrades["trades"]
                             if clt is not None and len(clt) > 0:
                                 trades.extend(clt)
 
                 elif m == 1:
                     cltrades = cl.trades()
-                    if cltrades is not None and 'trades' in cltrades:
-                        clt = cltrades['trades']
+                    if cltrades is not None and "trades" in cltrades:
+                        clt = cltrades["trades"]
                         if clt is not None and len(clt) > 0:
                             trades.extend(clt)
 
                     cltrades = cl.trades(offset=500)
-                    if cltrades is not None and 'trades' in cltrades:
-                        clt = cltrades['trades']
+                    if cltrades is not None and "trades" in cltrades:
+                        clt = cltrades["trades"]
                         if clt is not None and len(clt) > 0:
                             trades.extend(clt)
                 else:
                     cltrades = cl.trades()
-                    if cltrades is not None and 'trades' in cltrades:
-                        clt = cltrades['trades']
+                    if cltrades is not None and "trades" in cltrades:
+                        clt = cltrades["trades"]
                         if clt is not None and len(clt) > 0:
                             trades = clt
 
@@ -245,7 +241,7 @@ class FTUIClient():
         logstr = ""
 
         if logjson is not None and "logs" in logjson:
-            logs = logjson['logs']
+            logs = logjson["logs"]
 
             for logline in logs:
                 logstr += f"{logline[0]} - {logline[2]} - {logline[3]} - {logline[4]}\n"
@@ -261,20 +257,20 @@ class FTUIClient():
         cl = self.rest_client
         bal = cl.balance()
         avail_bal = 0
-        for b in bal['currencies']:
-            if b['currency'] == self.config['stake_currency']:
-                avail_bal = b['balance']
+        for b in bal["currencies"]:
+            if b["currency"] == self.config["stake_currency"]:
+                avail_bal = b["balance"]
                 break
 
-        if self.config['max_open_trades'] > 0:
+        if self.config["max_open_trades"] > 0:
             max_capit = 0
-            if self.config['stake_amount'] != "unlimited":
-                max_capit = float(self.config['stake_amount'] * self.config['max_open_trades'])
+            if self.config["stake_amount"] != "unlimited":
+                max_capit = float(self.config["stake_amount"] * self.config["max_open_trades"])
             else:
-                max_capit = float(avail_bal / self.config['max_open_trades'])
+                max_capit = float(avail_bal / self.config["max_open_trades"])
 
             if max_capit > 0:
-                risk_per_trade = ((max_capit / self.config['max_open_trades']) / max_capit) * 100
+                risk_per_trade = ((max_capit / self.config["max_open_trades"]) / max_capit) * 100
                 return -np.round(avail_bal * risk_per_trade / 100, 2)
             else:
                 return 0
