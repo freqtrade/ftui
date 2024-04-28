@@ -32,6 +32,7 @@ from rich.table import Table
 
 from textual import work
 from textual.app import App
+from textual.color import Color
 from textual.logging import TextualHandler
 from textual.reactive import reactive, var
 
@@ -117,11 +118,20 @@ class FreqText(App):
         "help": help_screen,
     }
 
+    # supported colours: https://textual.textualize.io/api/color/
+    COLOURS = fth.FtuiColours()
+
     def set_client_dict(self, client_dict):
         self.client_dict = client_dict
 
     def set_settings(self, args):
         self.settings = args
+
+        if self.settings.colours:
+            self.set_colours(self.settings.colours)
+
+    def set_colours(self, colours):
+        self.COLOURS.set_colours(colours)
 
     def on_mount(self) -> None:
         self.switch_mode("dashboard")

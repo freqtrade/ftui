@@ -75,7 +75,25 @@ servers:
       ip          : 5.6.7.8
       port        : 8080
 
+colours:
+    pair_col: "purple"
+    bot_col: "yellow"
+    bot_start_col: "white"
+    trade_id_col: "white"
+    open_rate_col: "white"
+    current_rate_col: "white"
+    open_date_col: "cyan"
+    winrate_col: "cyan"
+    open_trade_num_col: "cyan"
+    closed_trade_num_col: "purple"
+    profit_chart_col: "orange"
+    link_col: "yellow"
+    candlestick_trade_text_col: "orange"
+    candlestick_trade_open_col: "blue"
+    candlestick_trade_close_col: "purple"
+
 debug: False
+show_fear: True
 ```
 
 Add a corresponding `servers` block into your own `config.yaml`, making note of the
@@ -85,6 +103,11 @@ You can monitor bots across multiple servers easily in one FTUI interface. FTUI 
 the [freqtrade-client](https://pypi.org/project/freqtrade-client/) REST API client, so
 you do not need to wrestle with any CORS setup as you have to do in FreqUI to access
 multiple bots.
+
+You can also set custom colours for some of the UI elements as per the example above. 
+The supported list of colour names can be found 
+[here](https://textual.textualize.io/api/color/#textual.color--named-colors). You can
+leave the `colours` option out of the configuration and defaults will be used.
 
 In future, the Settings screen will allow configuration of the `config.yaml` from inside the
 FTUI interface.

@@ -6,13 +6,13 @@ from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 
-from rich.color import Color
 from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
 from textual import work, on
 from textual.app import ComposeResult
+from textual.color import Color
 from textual.containers import Container, Horizontal, Vertical
 from textual_plotext import PlotextPlot
 from textual.screen import Screen, ModalScreen
@@ -93,7 +93,8 @@ class DashboardScreen(Screen):
                         yield Static(id="all-open-trades-table", classes="bg-static-default")
 
                     with Collapsible(title="All Closed Trades", id="dsh-cl-collap", collapsed=True):
-                        yield Static(id="dash-closed-profit", classes="bg-static-default")
+                        with Container(id="dash-closed-profit-container"):
+                            yield Static(id="dash-closed-profit", classes="bg-static-default")
 
                     with Collapsible(title="Cumulative Profit", id="dsh-cp-collap", collapsed=True):
                         yield PlotextPlot(id="dash-cumprof-profit", classes="bg-static-default")
@@ -396,7 +397,7 @@ class DashboardScreen(Screen):
 
             trade_cnt_str = (
                 f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}"
-                f"[white]/[magenta]{t['closed_trade_count']}"
+                f"[white]/[purple]{t['closed_trade_count']}"
             )
 
             row_data.append(
@@ -407,7 +408,7 @@ class DashboardScreen(Screen):
                     fth.red_or_green(round(open_profit, 2), justify="right"),
                     f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
                     f"[cyan]{round(winrate, 1)}",
-                    f"[magenta]{round(expectancy, 2)}",
+                    f"[purple]{round(expectancy, 2)}",
                     fth.red_or_green(round(expectancy_ratio, 2)),
                     fth.red_or_green(
                         round(median_win, 2), justify="right"
@@ -453,7 +454,12 @@ class DashboardScreen(Screen):
 
                 dates = cplt.datetimes_to_string(all_cum_data.index)
 
-                cplt.plot(dates, all_cum_data["plot_cumprof"].values, color="orange")
+                cplt.plot(
+                    dates,
+                    all_cum_data["plot_cumprof"].values,
+                    color=self.app.COLOURS.profit_chart_col,
+                )
+
                 cplt.ylim(
                     all_cum_data["plot_cumprof"].min() * 0.99,
                     all_cum_data["plot_cumprof"].max() * 1.01,
@@ -768,7 +774,7 @@ class MainBotScreen(Screen):
 
         trade_cnt_str = (
             f"[cyan]{int(t['trade_count'])-int(t['closed_trade_count'])}"
-            f"[white]/[magenta]{t['closed_trade_count']}"
+            f"[white]/[purple]{t['closed_trade_count']}"
         )
 
         row_data.append(
@@ -778,7 +784,7 @@ class MainBotScreen(Screen):
                 fth.red_or_green(round(open_profit, 2), justify="right"),
                 f"[green]{t['winning_trades']}/[red]{t['losing_trades']}",
                 f"[cyan]{round(winrate, 1)}",
-                f"[magenta]{round(expectancy, 2)}",
+                f"[purple]{round(expectancy, 2)}",
                 fth.red_or_green(round(expectancy_ratio, 2), justify="right"),
                 f"[green]{median_win}",
                 f"[red]{median_loss}",
@@ -890,7 +896,7 @@ class MainBotScreen(Screen):
                 render_data = (
                     # Text.styled(str(v['ID']), Style(
                     #     meta={"@click": f"show_trade_info_dialog('{str(v['ID'])}', '{ftuic.name}')"},
-                    #     color=Color("dark_goldenrod", 0)
+                    #     color=self.app.COLOURS['link_col']
                     # )),
                     f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
                     f"[@click=update_chart('{ftuic.name}', '{v['Pair']}')]{v['Pair']}[/]",
@@ -1128,7 +1134,7 @@ class MainBotScreen(Screen):
                                     x=odate.strftime(self.app.DFMT),
                                     y=t["Open Rate"] + (y_per_box * 2),
                                     alignment="left",
-                                    color="orange",
+                                    color=self.app.COLOURS["candlestick_trade_text_col"],
                                 )
 
                         if "Close Rate" in t:
@@ -1138,8 +1144,18 @@ class MainBotScreen(Screen):
                                     c_dates.append(t["Close Date"].strftime(self.app.DFMT))
 
                     if len(o_dates) > 0 or len(c_dates) > 0:
-                        cplt.scatter(o_dates, o_events, marker=open_marker, color="blue")
-                        cplt.scatter(c_dates, c_events, marker="x", color="yellow")
+                        cplt.scatter(
+                            o_dates,
+                            o_events,
+                            marker=open_marker,
+                            color=self.app.COLOURS["candlestick_trade_open_col"],
+                        )
+                        cplt.scatter(
+                            c_dates,
+                            c_events,
+                            marker="x",
+                            color=self.app.COLOURS["candlestick_trade_close_col"],
+                        )
 
                 xticks = [
                     d.strftime(self.app.DFMT)

@@ -104,15 +104,10 @@ ListView Label {
     background: #222;
 }
 
-#dsh-cl-collap {
+#dash-closed-profit-container {
+    height: 32;
     overflow: auto;
-    max-height: 32;
-}
-
-#dash-closed-profit {
-    overflow: auto;
-    height: auto;
-    scrollbar-gutter: auto;
+    scrollbar-gutter: stable;
 }
 
 #dash-cumprof-profit {

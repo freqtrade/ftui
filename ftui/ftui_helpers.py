@@ -9,7 +9,48 @@ from rich import box
 from rich.table import Table
 from rich.text import Text
 
+from textual.color import Color
+from textual._color_constants import COLOR_NAME_TO_RGB
+
 import freqtrade_client.ft_rest_client as ftrc
+
+
+class FtuiColours(dict[str, Color]):
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+    REVERSED_COL_MAP = dict(map(reversed, COLOR_NAME_TO_RGB.items()))
+
+    def __init__(self):
+        super().__init__(
+            {
+                "pair_col": Color.parse("purple"),
+                "bot_col": Color.parse("yellow"),
+                "bot_start_col": Color.parse("white"),
+                "trade_id_col": Color.parse("white"),
+                "open_rate_col": Color.parse("white"),
+                "current_rate_col": Color.parse("white"),
+                "open_date_col": Color.parse("cyan"),
+                "winrate_col": Color.parse("cyan"),
+                "open_trade_num_col": Color.parse("cyan"),
+                "closed_trade_num_col": Color.parse("purple"),
+                "profit_chart_col": Color.parse("orange"),
+                "link_col": Color.parse("yellow"),
+                "candlestick_trade_text_col": Color.parse("orange"),
+                "candlestick_trade_open_col": Color.parse("blue"),
+                "candlestick_trade_close_col": Color.parse("purple"),
+            }
+        )
+
+    def __getattr__(self, key):
+        if key in self:
+            return self.REVERSED_COL_MAP[self[key].rgb]
+        raise AttributeError(key)
+
+    def set_colours(self, colours):
+        for k, v in colours.items():
+            self[k] = Color.parse(v)
 
 
 class dotdict(dict):
@@ -141,29 +182,16 @@ def fear_index(num_days_daily, retfear={}):
     return retfear
 
 
-def dash_all_bot_summary(row_data) -> Table:
-    table = Table(expand=True, box=box.SIMPLE_HEAD)
-
-    table.add_column("Open", style="white", justify="left", ratio=1, no_wrap=True)
-    table.add_column("Closed", style="white", justify="left", ratio=1, no_wrap=True)
-    table.add_column("Daily", style="white", justify="left", ratio=1, no_wrap=True)
-    table.add_column("Weekly", style="white", justify="left", ratio=1, no_wrap=True)
-    table.add_column("Monthly", style="white", justify="left", ratio=1, no_wrap=True)
-
-    for row in row_data:
-        table.add_row(*row)
-
-    return table
-
-
 def dash_trades_summary(
-    row_data, footer={"all_open_profit": "0", "num_wins_losses": "0/0", "all_total_profit": "0"}
+    row_data,
+    footer={"all_open_profit": "0", "num_wins_losses": "0/0", "all_total_profit": "0"},
+    colours=FtuiColours(),
 ) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS, show_footer=True)
 
     # ("Bot", "# Trades", "Open Profit", "W/L", "Winrate", "Exp.", "Exp. Rate", "Med W", "Med L", "Tot. Profit")
-    table.add_column("Bot", style="yellow", no_wrap=True)
-    table.add_column("Start", style="white", no_wrap=True)
+    table.add_column("Bot", style=colours.bot_col, no_wrap=True)
+    table.add_column("Start", style=colours.bot_start_col, no_wrap=True)
     table.add_column("# Trades", no_wrap=True)
     table.add_column("Open Profit", style="blue", justify="right", no_wrap=True)
     table.add_column("W/L", justify="right", no_wrap=True)
@@ -184,20 +212,20 @@ def dash_trades_summary(
     return table
 
 
-def dash_open_trades_table(row_data, trading_mode="spot") -> Table:
+def dash_open_trades_table(row_data, trading_mode="spot", colours=FtuiColours()) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("Bot", "ID", "Pair", "Open Rate", "Current Rate", "Stop %", "Profit %", "Profit", "Dur.", "S/L", "Entry")
-    table.add_column("Bot", style="yellow", no_wrap=True)
-    table.add_column("ID", style="white", no_wrap=True)
-    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Bot", style=colours.bot_col, no_wrap=True)
+    table.add_column("ID", style=colours.trade_id_col, no_wrap=True)
+    table.add_column("Pair", style=colours.pair_col, no_wrap=True)
     table.add_column("Stake", justify="left")
 
     if trading_mode != "spot":
         table.add_column("Leverage", justify="left")
 
-    table.add_column("Open Rate", style="white", no_wrap=True)
-    table.add_column("Rate", style="white", no_wrap=True)
+    table.add_column("Open Rate", style=colours.open_rate_col, no_wrap=True)
+    table.add_column("Rate", style=colours.current_rate_col, no_wrap=True)
     table.add_column("Stop %", no_wrap=True)
     table.add_column("Profit %", justify="right")
     table.add_column("Profit", justify="right")
@@ -211,13 +239,13 @@ def dash_open_trades_table(row_data, trading_mode="spot") -> Table:
     return table
 
 
-def dash_closed_trades_table(row_data) -> Table:
+def dash_closed_trades_table(row_data, colours=FtuiColours()) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("Bot", "ID", "Pair", "Profit %", "Profit", "Dur.", "Exit")
-    table.add_column("Bot", style="yellow", no_wrap=True)
-    table.add_column("ID", style="white", no_wrap=True)
-    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("Bot", style=colours.bot_col, no_wrap=True)
+    table.add_column("ID", style=colours.trade_id_col, no_wrap=True)
+    table.add_column("Pair", style=colours.pair_col, no_wrap=True)
     table.add_column("Profit %", justify="right")
     table.add_column("Profit", justify="right")
     table.add_column("Open Date", justify="right")
@@ -249,10 +277,10 @@ def dash_cumulative_profit_plot_data(trades, bot=None, pair=None):
     return data
 
 
-def bot_trades_summary_table(row_data) -> Table:
+def bot_trades_summary_table(row_data, colours=FtuiColours()) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
-    table.add_column("Start", style="white", no_wrap=True)
+    table.add_column("Start", style=colours.bot_start_col, no_wrap=True)
     table.add_column("# Trades", no_wrap=True)
     table.add_column("Open Profit", style="blue", justify="right", no_wrap=True)
     table.add_column("W/L", justify="right", no_wrap=True)
@@ -269,19 +297,19 @@ def bot_trades_summary_table(row_data) -> Table:
     return table
 
 
-def bot_open_trades_table(row_data, trading_mode="spot") -> Table:
+def bot_open_trades_table(row_data, trading_mode="spot", colours=FtuiColours()) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("ID", "Pair", "Open Rate", "Current Rate", "Stop %", "Profit %", "Profit", "Dur.", "S/L", "Entry")
-    table.add_column("ID", style="white", no_wrap=True)
-    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("ID", style=colours.trade_id_col, no_wrap=True)
+    table.add_column("Pair", style=colours.pair_col, no_wrap=True)
     table.add_column("Stake", justify="left")
 
     if trading_mode != "spot":
         table.add_column("Leverage", justify="left")
 
-    table.add_column("Open Rate", style="white", no_wrap=True)
-    table.add_column("Rate", style="white", no_wrap=True)
+    table.add_column("Open Rate", style=colours.open_rate_col, no_wrap=True)
+    table.add_column("Rate", style=colours.current_rate_col, no_wrap=True)
     table.add_column("Stop %", no_wrap=True)
     table.add_column("Profit %", justify="right")
     table.add_column("Profit", justify="right")
@@ -295,12 +323,12 @@ def bot_open_trades_table(row_data, trading_mode="spot") -> Table:
     return table
 
 
-def bot_closed_trades_table(row_data, trading_mode="spot") -> Table:
+def bot_closed_trades_table(row_data, trading_mode="spot", colours=FtuiColours()) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("ID", "Pair", "Profit %", "Profit", "Dur.", "Exit")
-    table.add_column("ID", style="white", no_wrap=True)
-    table.add_column("Pair", style="magenta", no_wrap=True)
+    table.add_column("ID", style=colours.trade_id_col, no_wrap=True)
+    table.add_column("Pair", style=colours.pair_col, no_wrap=True)
     table.add_column("Stake", justify="left")
 
     if trading_mode != "spot":
@@ -319,12 +347,12 @@ def bot_closed_trades_table(row_data, trading_mode="spot") -> Table:
     return table
 
 
-def bot_tag_summary_table(row_data) -> Table:
+def bot_tag_summary_table(row_data, colours=FtuiColours()) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("Tag", "W/L", "Avg Dur.", "Avg Win Dur.", "Avg Loss Dur.", "Profit")
     table.add_column("Tag", style="white", no_wrap=True)
-    table.add_column("W/L", style="magenta", no_wrap=True)
+    table.add_column("W/L", style="purple", no_wrap=True)
     table.add_column("Avg Dur.", justify="right")
     table.add_column("Avg Win Dur.", justify="right")
     table.add_column("Avg Loss Dur.", justify="right")
@@ -336,12 +364,12 @@ def bot_tag_summary_table(row_data) -> Table:
     return table
 
 
-def bot_perf_summary_table(row_data) -> Table:
+def bot_perf_summary_table(row_data, colours=FtuiColours()) -> Table:
     table = Table(expand=True, box=box.HORIZONTALS)
 
     # ("Pair", "# Trades", "Avg Profit %", "Total Profit"),
-    table.add_column("Pair", style="white", no_wrap=True)
-    table.add_column("# Trades", style="magenta", no_wrap=True)
+    table.add_column("Pair", style=colours.pair_col, no_wrap=True)
+    table.add_column("# Trades", style="white", no_wrap=True)
     table.add_column("Avg Profit %", justify="right")
     table.add_column("Total Profit", justify="right")
 
