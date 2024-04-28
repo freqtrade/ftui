@@ -10,6 +10,8 @@ FTUI is developed using the awesome [Textual](https://textual.textualize.io/) an
 - Original concept and development: [@froggleston](https://github.com/froggleston)
 - Github : [https://github.com/freqtrade/ftui](https://github.com/freqtrade/ftui)
 
+### FTUI is in an alpha state so there will be bugs and missing features
+
 ![image](https://github.com/freqtrade/ftui/assets/1872302/60deca56-421b-436d-85e3-eea4befe4c37)
 
 ## Getting Started
@@ -131,6 +133,28 @@ The bot view allows selection of a running bot from the dropdown at the top of t
 Once selected, various information about the bot will be shown in the tabs in the bottom half
 of the screen. You can access the View Bots screen by clicking the button in the bottom left,
 or hitting the `B` key.
+
+Open trades:
+![image](https://github.com/freqtrade/ftui/assets/1872302/ac12cf57-2235-4215-9463-8072ef9d9f02)
+
+Closed trades:
+![image](https://github.com/freqtrade/ftui/assets/1872302/abdd62ef-f9dc-4eb3-b33e-05e4611141c5)
+
+Tag summary:
+![image](https://github.com/freqtrade/ftui/assets/1872302/906f644b-f203-45a3-b821-c7b0d25a01e7)
+
+Performance:
+![image](https://github.com/freqtrade/ftui/assets/1872302/16cce9a9-61f0-4caa-98f2-823b57a82ef8)
+
+General bot information:
+![image](https://github.com/freqtrade/ftui/assets/1872302/6e597102-59f2-4456-b321-f5ce787ab89d)
+
+Logs:
+![image](https://github.com/freqtrade/ftui/assets/1872302/1dcc8b43-7bd4-43ae-907f-0dc749a717ea)
+
+Sysinfo:
+![image](https://github.com/freqtrade/ftui/assets/1872302/b1377e21-03f8-47a1-92eb-11b523753ad7)
+
 
 __Settings__
 
