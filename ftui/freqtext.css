@@ -74,7 +74,6 @@ ListView Label {
 }
 
 #dash-collapsibles {
-    overflow: auto;
     height: auto;
     border: yellow;
 }

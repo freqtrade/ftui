@@ -100,33 +100,24 @@ class FTUIClient:
         if self.config is None:
             self.config = self.rest_client.show_config()
 
-        # bot_state = current_config['state']
-        # runmode = current_config['runmode']
-        # strategy = current_config['strategy']
-        # stoploss = abs(current_config['stoploss']) * 100
-        # max_open_trades = current_config['max_open_trades']
-        # stake_amount = current_config['stake_amount']
-
-        # return current_config
         return self.config
 
-    def get_pair_dataframe(self, pair, limit=200) -> pd.DataFrame:
+    def get_pair_dataframe(self, pair, limit=200, columns=None) -> pd.DataFrame:
         cl = self.rest_client
         candles = cl.pair_candles(
-            pair, timeframe=self.get_client_config()["timeframe"], limit=limit
+            pair,
+            timeframe=self.get_client_config()["timeframe"],
+            limit=limit,
+            columns=columns
         )
 
         if candles is not None:
-            cols = candles["columns"]
-            data = candles["data"]
+            if "columns" in candles and "data" in candles:
+                cols = candles["columns"]
+                data = candles["data"]
 
-            if cols and data:
-                df = pd.DataFrame(data, columns=cols)
-                df.rename(
-                    columns={"open": "Open", "close": "Close", "high": "High", "low": "Low"},
-                    inplace=True,
-                )
-                return df
+                if cols and data:
+                    return pd.DataFrame(data, columns=cols)
 
         return None
 

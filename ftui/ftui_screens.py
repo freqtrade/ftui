@@ -1001,9 +1001,22 @@ class MainBotScreen(Screen):
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data or refresh:
             chart_container.loading = True
-            data = cl.get_pair_dataframe(pair, limit=min(max(round(cw / 2), 50), 200))
+            data = cl.get_pair_dataframe(
+                pair,
+                limit=min(max(round(cw / 2), 50), 200),
+                columns=[])
             if data is not None and not data.empty:
-                self.chart_data[ckey] = data[["date", "Open", "Close", "High", "Low"]]
+                data.rename(
+                    columns={
+                        "open": "Open",
+                        "close": "Close",
+                        "high": "High",
+                        "low": "Low",
+                        "volume": "Volume"
+                    },
+                    inplace=True,
+                )
+                self.chart_data[ckey] = data
                 self._render_chart(cl, pair, self.chart_data[ckey])
             else:
                 msg = (
@@ -1017,10 +1030,23 @@ class MainBotScreen(Screen):
                 )
         else:
             # check if new data is available
-            data = cl.get_pair_dataframe(pair, limit=1)
+            data = cl.get_pair_dataframe(
+                pair,
+                limit=1,
+                columns=[])
             if data is not None and not data.empty:
+                data.rename(
+                    columns={
+                        "open": "Open",
+                        "close": "Close",
+                        "high": "High",
+                        "low": "Low",
+                        "volume": "Volume"
+                    },
+                    inplace=True,
+                )
                 last_date = self.chart_data[ckey].iloc[-1]["date"]
-                new_data = data[["date", "Open", "Close", "High", "Low"]].loc[
+                new_data = data.loc[
                     data["date"] > last_date
                 ]
                 if not new_data.empty:
