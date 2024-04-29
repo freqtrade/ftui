@@ -418,6 +418,8 @@ def bot_general_metrics_table(client) -> str:
     trade_count = t["trade_count"]
     closed_trade_count = t["closed_trade_count"]
 
+    profit_factor = round(t['profit_factor'], 2) if t['profit_factor'] is not None else "-"
+
     table = Table(expand=True, box=box.HORIZONTALS, row_styles=["grey89", ""])
     table.add_column("Metric", style="bold white", no_wrap=True, ratio=1)
     table.add_column("Value", style="white", no_wrap=False, ratio=2)
@@ -448,7 +450,7 @@ def bot_general_metrics_table(client) -> str:
         (f"Avg. Duration", f"{t['avg_duration']}"),
         (f"Best performing", f"{t['best_pair']}: {t['best_rate']}%"),
         (f"Trading volume", f"{round(t['trading_volume'], 2)} {config['stake_currency']}"),
-        (f"Profit factor", f"{round(t['profit_factor'], 2)}"),
+        (f"Profit factor", f"{profit_factor}"),
         (
             f"Max Drawdown",
             f"{round(t['max_drawdown']*100, 2)}% "
