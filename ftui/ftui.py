@@ -169,6 +169,9 @@ class FreqText(App):
                 stop_profit = round(
                     ((t["stop_loss_abs"] - t["open_rate"]) / t["stop_loss_abs"]) * 100, 2
                 )
+                max_profit = round(
+                    ((t["max_rate"] - t["open_rate"]) / t["max_rate"]) * 100, 2
+                )
 
                 row_data.append(
                     (
@@ -178,6 +181,7 @@ class FreqText(App):
                         t["open_rate"],
                         t["current_rate"],
                         stop_profit,
+                        max_profit,
                         t["profit_pct"],
                         rpfta,
                         ctime - otime,
@@ -198,6 +202,7 @@ class FreqText(App):
                 "Open Rate",
                 "Current Rate",
                 "Stop %",
+                "Max %",
                 "Profit %",
                 "Profit",
                 "Dur.",
@@ -406,7 +411,7 @@ class FreqText(App):
 
         self.MODES["bots"].update_select_options(bot_id)
 
-    def action_switch_ftui_mode(self, mode) -> None:
+    async def action_switch_ftui_mode(self, mode) -> None:
         current_screen = self.screen
 
         for ts in current_screen.timers.keys():
@@ -417,7 +422,10 @@ class FreqText(App):
             print(f"Resuming {mode} {ts}")
             self.MODES[mode].timers[ts].resume()
 
-        self.switch_mode(mode)
+        await self.switch_mode(mode)
+
+        if mode == "bots":
+            self.MODES["bots"].update_select_options()
 
     def action_update_chart(self, bot_id, pair) -> None:
         self.MODES["bots"].update_chart(bot_id, pair)

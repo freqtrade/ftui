@@ -161,8 +161,9 @@ class DashboardScreen(Screen):
                 f"{v['Open Rate']}",
                 f"{v['Current Rate']}",
                 fth.red_or_green(float(v["Stop %"])),
-                fth.red_or_green(float(v["Profit %"]), justify="right"),
-                fth.red_or_green(float(v["Profit"]), justify="right"),
+                fth.red_or_green(float(v['Max %']), justify='left'),
+                fth.red_or_green(float(v['Profit %']), justify='right'),
+                fth.red_or_green(float(v["Profit"]), justify="left"),
                 str(v["Dur."]).split(".")[0].replace("0 days ", ""),
                 f"{v['S/L']}",
                 f"{v['Entry']}",
@@ -688,10 +689,14 @@ class MainBotScreen(Screen):
         self.client_select_options = options
 
         sel = self.query_one("#client-select")
+        current_selection = sel.value
+
         sel.set_options(self.client_select_options)
 
         if bot_id is not None:
             sel.value = bot_id
+        else:
+            sel.value = current_selection
 
     @work(group="tabswitch_workers", exclusive=False, thread=True)
     def update_tab(self, tab_id, bot_id):
