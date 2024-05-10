@@ -169,9 +169,12 @@ class FreqText(App):
                 stop_profit = round(
                     ((t["stop_loss_abs"] - t["open_rate"]) / t["stop_loss_abs"]) * 100, 2
                 )
-                max_profit = round(
-                    ((t["max_rate"] - t["open_rate"]) / t["max_rate"]) * 100, 2
-                )
+
+                max_profit = 0
+                if t["max_rate"] is not None and t['max_rate'] != 0:
+                    max_profit = round(
+                        ((t["max_rate"] - t["open_rate"]) / t["max_rate"]) * 100, 2
+                    )
 
                 row_data.append(
                     (
