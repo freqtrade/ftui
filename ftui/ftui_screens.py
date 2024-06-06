@@ -1,4 +1,3 @@
-import webbrowser
 
 from pathlib import Path
 from datetime import datetime, timezone
@@ -6,13 +5,11 @@ from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 
-from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
 from textual import work, on
 from textual.app import ComposeResult
-from textual.color import Color
 from textual.containers import Container, Horizontal, Vertical
 from textual_plotext import PlotextPlot
 from textual.screen import Screen, ModalScreen
@@ -27,12 +24,8 @@ from textual.widgets import (
     Input,
     Label,
     ListView,
-    ListItem,
     Log,
-    Markdown,
-    MarkdownViewer,
     ProgressBar,
-    Rule,
     Select,
     Sparkline,
     Static,
@@ -1172,7 +1165,7 @@ class MainBotScreen(Screen):
                 self.app.call_from_thread(chart_container.refresh)
             else:
                 self.notify(
-                    f"Please try clicking Refresh above to retry",
+                    "Please try clicking Refresh above to retry",
                     title=f"Error: No data available for {pair}",
                     severity="warning",
                 )
@@ -1427,7 +1420,7 @@ class HelpScreen(Screen):
             msg = f"Unable to load help file: {self.help_file_path!r}"
             self.notify(
                 msg,
-                title=f"Error:",
+                title="Error:",
                 severity="warning",
             )
 

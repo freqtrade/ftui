@@ -1,5 +1,4 @@
 import requests
-import webbrowser
 
 from datetime import datetime
 
@@ -12,7 +11,6 @@ from rich.text import Text
 from textual.color import Color
 from textual._color_constants import COLOR_NAME_TO_RGB
 
-import freqtrade_client.ft_rest_client as ftrc
 
 
 class FtuiColours(dict[str, Color]):
@@ -427,33 +425,33 @@ def bot_general_metrics_table(client) -> str:
 
     row_data = [
         (
-            f"Avg Profit",
+            "Avg Profit",
             f"{round(t['profit_all_ratio_mean']*100, 2)}% "
             f"(∑ {round(t['profit_all_ratio_sum']*100, 2)}%) in {trade_count} trades",
         ),
         (
-            f"ROI closed trades",
+            "ROI closed trades",
             f"{round(t['profit_closed_coin'], 2)} {config['stake_currency']} "
             f"({round(t['profit_closed_ratio_mean'], 2)}%)",
         ),
         (
-            f"ROI all trades",
+            "ROI all trades",
             f"{round(t['profit_all_coin'], 2)} {config['stake_currency']} "
             f"({round(t['profit_all_ratio_mean'], 2)}%)",
         ),
-        (f"Total Trade count", f"{trade_count}"),
-        (f"Bot started", f"{t['bot_start_date']}"),
-        (f"First Trade opened", f"{t['first_trade_date']}"),
-        (f"Latest Trade opened", f"{t['latest_trade_date']}"),
-        (f"Win / Loss", f"{t['winning_trades']} / {t['losing_trades']}"),
-        (f"Winrate", f"{round(t['winrate'], 3)}%"),
-        (f"Expectancy (ratio)", f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"),
-        (f"Avg. Duration", f"{t['avg_duration']}"),
-        (f"Best performing", f"{t['best_pair']}: {t['best_rate']}%"),
-        (f"Trading volume", f"{round(t['trading_volume'], 2)} {config['stake_currency']}"),
-        (f"Profit factor", f"{profit_factor}"),
+        ("Total Trade count", f"{trade_count}"),
+        ("Bot started", f"{t['bot_start_date']}"),
+        ("First Trade opened", f"{t['first_trade_date']}"),
+        ("Latest Trade opened", f"{t['latest_trade_date']}"),
+        ("Win / Loss", f"{t['winning_trades']} / {t['losing_trades']}"),
+        ("Winrate", f"{round(t['winrate'], 3)}%"),
+        ("Expectancy (ratio)", f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"),
+        ("Avg. Duration", f"{t['avg_duration']}"),
+        ("Best performing", f"{t['best_pair']}: {t['best_rate']}%"),
+        ("Trading volume", f"{round(t['trading_volume'], 2)} {config['stake_currency']}"),
+        ("Profit factor", f"{profit_factor}"),
         (
-            f"Max Drawdown",
+            "Max Drawdown",
             f"{round(t['max_drawdown']*100, 2)}% "
             f"({round(t['max_drawdown_abs'], 2)} {config['stake_currency']}) "
             f"from {t['max_drawdown_start']} to {t['max_drawdown_end']}",
