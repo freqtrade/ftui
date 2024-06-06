@@ -55,6 +55,9 @@ jobs:
       name: release
       url: https://pypi.org/p/ftui
 
+    permissions:
+      id-token: write
+
     needs: build
     runs-on: ubuntu-22.04
 
