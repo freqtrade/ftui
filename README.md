@@ -26,6 +26,8 @@ for running Freqtrade bots.
 Currently, FTUI is only supported on Linux systems. We hope to provide a Docker container
 in future.
 
+The easiest way to install FTUI is via pip: `pip install ftui`
+
 __Linux__
 
 FTUI can be installed into an existing venv (e.g. a existing freqtrade venv) or in a 
