@@ -437,12 +437,12 @@ class FreqText(App):
         tis.client = self.client_dict[cl_name]
         self.push_screen(tis)
 
-    def action_open_link(self, link) -> None:
-        try:
-            webbrowser.open(link, new=2)
-        except Exception as e:
-            print(f"Error opening link: {e}")
-            pass
+    # def action_open_link(self, link) -> None:
+    #     try:
+    #         webbrowser.open(link, new=2)
+    #     except Exception as e:
+    #         print(f"Error opening link: {e}")
+    #         pass
 
 
 def setup(args):
