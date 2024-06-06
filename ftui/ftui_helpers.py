@@ -405,17 +405,11 @@ def bot_general_info(client) -> str:
 def bot_general_metrics_table(client) -> str:
     config = client.get_client_config()
 
-    TZFMT = "%Y-%m-%d %H:%M:%S%z"
-
     t = client.get_total_profit()
     if t is None:
         return "[ERROR] Could not retrieve profit data."
 
-    pcc = round(float(t["profit_closed_coin"]), 2)
-    best_pair = t["best_pair"]
-
     trade_count = t["trade_count"]
-    closed_trade_count = t["closed_trade_count"]
 
     profit_factor = round(t['profit_factor'], 2) if t['profit_factor'] is not None else "-"
 

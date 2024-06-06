@@ -1296,7 +1296,7 @@ class MainBotScreen(Screen):
         client_dict = self.app.client_dict
 
         cl = client_dict[bot_id]
-        data = self._render_sysinfo(cl)
+        self._render_sysinfo(cl)
 
     def _render_sysinfo(self, ftuic):
         sysinfo = ftuic.get_sys_info()
