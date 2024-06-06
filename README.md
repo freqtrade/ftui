@@ -44,8 +44,6 @@ Once installed, a `config.yaml` needs to be provided to FTUI, so create it in yo
 `ftui/` directory and edit it with a cli text editor like `nano`:
 
 ```bash
-$ pwd
-/home/froggleston/ftui
 $ touch config.yaml
 $ nano config.yaml
 ```
