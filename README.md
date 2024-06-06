@@ -37,7 +37,7 @@ $ cd ftui
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip3 install -r requirements.txt
-$ pip3 install freqtrade-ftui
+$ pip3 install -e .
 ```
 
 Once installed, a `config.yaml` needs to be provided to FTUI, so create it in your new
