@@ -224,6 +224,7 @@ def dash_open_trades_table(row_data, trading_mode="spot", colours=FtuiColours())
     if trading_mode != "spot":
         table.add_column("Leverage", justify="left")
 
+    table.add_column("# Orders", no_wrap=True)
     table.add_column("Open Rate", style=colours.open_rate_col, no_wrap=True)
     table.add_column("Rate", style=colours.current_rate_col, no_wrap=True)
     table.add_column("Stop %", no_wrap=True)
@@ -309,6 +310,7 @@ def bot_open_trades_table(row_data, trading_mode="spot", colours=FtuiColours()) 
     if trading_mode != "spot":
         table.add_column("Leverage", justify="left")
 
+    table.add_column("# Orders", no_wrap=True)
     table.add_column("Open Rate", style=colours.open_rate_col, no_wrap=True)
     table.add_column("Rate", style=colours.current_rate_col, no_wrap=True)
     table.add_column("Stop %", no_wrap=True)
@@ -427,26 +429,22 @@ def bot_general_metrics_table(client) -> str:
 
     row_data = [
         (
-            f"Avg Profit",
-            f"{round(t['profit_all_ratio_mean']*100, 2)}% "
-            f"(∑ {round(t['profit_all_ratio_sum']*100, 2)}%) in {trade_count} trades",
-        ),
-        (
             f"ROI closed trades",
             f"{round(t['profit_closed_coin'], 2)} {config['stake_currency']} "
-            f"({round(t['profit_closed_ratio_mean'], 2)}%)",
+            f"({chr(0x03BC)} {round(t['profit_closed_ratio_mean']*100, 2)}%) "
+            f"(∑ {round(t['profit_all_ratio_sum']*100, 2)}%)",
         ),
         (
             f"ROI all trades",
             f"{round(t['profit_all_coin'], 2)} {config['stake_currency']} "
-            f"({round(t['profit_all_ratio_mean'], 2)}%)",
+            f"({chr(0x03BC)} {round(t['profit_all_ratio_mean']*100, 2)}%)",
         ),
         (f"Total Trade count", f"{trade_count}"),
         (f"Bot started", f"{t['bot_start_date']}"),
         (f"First Trade opened", f"{t['first_trade_date']}"),
         (f"Latest Trade opened", f"{t['latest_trade_date']}"),
         (f"Win / Loss", f"{t['winning_trades']} / {t['losing_trades']}"),
-        (f"Winrate", f"{round(t['winrate'], 3)}%"),
+        (f"Winrate", f"{round(t['winrate']* 100, 3)}%"),
         (f"Expectancy (ratio)", f"{round(t['expectancy'], 2)} ({round(t['expectancy_ratio'], 2)})"),
         (f"Avg. Duration", f"{t['avg_duration']}"),
         (f"Best performing", f"{t['best_pair']}: {t['best_rate']}%"),

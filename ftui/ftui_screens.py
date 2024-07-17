@@ -158,7 +158,8 @@ class DashboardScreen(Screen):
                 render_data = render_data + (f"{v['Leverage']}")
 
             render_data = render_data + (
-                f"{v['Open Rate']}",
+                f"{v['# Orders']}",
+                f"{round(v['Open Rate'], 3)}",
                 f"{v['Current Rate']}",
                 fth.red_or_green(float(v["Stop %"])),
                 fth.red_or_green(float(v['Max %']), justify='left'),
@@ -696,7 +697,8 @@ class MainBotScreen(Screen):
         if bot_id is not None:
             sel.value = bot_id
         else:
-            sel.value = current_selection
+            if current_selection is not None and current_selection != "Select.BLANK":
+                sel.value = current_selection
 
     @work(group="tabswitch_workers", exclusive=False, thread=True)
     def update_tab(self, tab_id, bot_id):
@@ -828,6 +830,8 @@ class MainBotScreen(Screen):
                 t["has_open_orders"] if "has_open_orders" in t else (t["open_order_id"] is not None)
             )
 
+            num_orders = len(t['orders']) if 'orders' in t else 0
+
             suff = ""
             if open_orders and t["close_rate_requested"] is None:
                 suff = " *"
@@ -858,6 +862,7 @@ class MainBotScreen(Screen):
                 render_data = render_data + (f"{t['leverage']}")
 
             render_data = render_data + (
+                f"{num_orders}",
                 f"{t['open_rate']}",
                 f"{t['current_rate']}",
                 stp_txt,

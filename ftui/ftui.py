@@ -156,6 +156,8 @@ class FreqText(App):
                     else (t["open_order_id"] is not None)
                 )
 
+                num_orders = len(t["orders"]) if "orders" in t else 0
+
                 suff = ""
                 if open_orders and t["close_rate_requested"] is None:
                     suff = " *"
@@ -193,6 +195,7 @@ class FreqText(App):
                         t["open_date"],
                         t["stake_amount"],
                         t["leverage"],
+                        num_orders,
                     )
                 )
 
@@ -214,6 +217,7 @@ class FreqText(App):
                 "Open Date",
                 "Stake Amount",
                 "Leverage",
+                "# Orders",
             ],
         )
 
