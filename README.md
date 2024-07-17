@@ -6,7 +6,7 @@ Freqtrade Textual User Interface (FTUI) is a text-based interface for the
 FTUI is developed using the awesome [Textual](https://textual.textualize.io/) and
 [Rich](https://rich.readthedocs.io/en/stable/introduction.html) frameworks.
 
-- Version: 0.1.0
+- Version: 0.1.2
 - Original concept and development: [@froggleston](https://github.com/froggleston)
 - Github : [https://github.com/freqtrade/ftui](https://github.com/freqtrade/ftui)
 
