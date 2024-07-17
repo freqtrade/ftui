@@ -1,5 +1,4 @@
 import requests
-import webbrowser
 
 from datetime import datetime
 
@@ -12,7 +11,6 @@ from rich.text import Text
 from textual.color import Color
 from textual._color_constants import COLOR_NAME_TO_RGB
 
-import freqtrade_client.ft_rest_client as ftrc
 
 
 class FtuiColours(dict[str, Color]):
@@ -409,17 +407,11 @@ def bot_general_info(client) -> str:
 def bot_general_metrics_table(client) -> str:
     config = client.get_client_config()
 
-    TZFMT = "%Y-%m-%d %H:%M:%S%z"
-
     t = client.get_total_profit()
     if t is None:
         return "[ERROR] Could not retrieve profit data."
 
-    pcc = round(float(t["profit_closed_coin"]), 2)
-    best_pair = t["best_pair"]
-
     trade_count = t["trade_count"]
-    closed_trade_count = t["closed_trade_count"]
 
     profit_factor = round(t['profit_factor'], 2) if t['profit_factor'] is not None else "-"
 
@@ -435,7 +427,7 @@ def bot_general_metrics_table(client) -> str:
             f"(∑ {round(t['profit_all_ratio_sum']*100, 2)}%)",
         ),
         (
-            f"ROI all trades",
+            "ROI all trades",
             f"{round(t['profit_all_coin'], 2)} {config['stake_currency']} "
             f"({chr(0x03BC)} {round(t['profit_all_ratio_mean']*100, 2)}%)",
         ),
@@ -451,7 +443,7 @@ def bot_general_metrics_table(client) -> str:
         (f"Trading volume", f"{round(t['trading_volume'], 2)} {config['stake_currency']}"),
         (f"Profit factor", f"{profit_factor}"),
         (
-            f"Max Drawdown",
+            "Max Drawdown",
             f"{round(t['max_drawdown']*100, 2)}% "
             f"({round(t['max_drawdown_abs'], 2)} {config['stake_currency']}) "
             f"from {t['max_drawdown_start']} to {t['max_drawdown_end']}",

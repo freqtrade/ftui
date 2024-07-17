@@ -25,14 +25,9 @@ from datetime import datetime, timezone, timedelta
 
 import pandas as pd
 
-from rich.progress import Progress, BarColumn, TextColumn
-from rich.rule import Rule
-from rich.style import Style
-from rich.table import Table
 
 from textual import work
 from textual.app import App
-from textual.color import Color
 from textual.logging import TextualHandler
 from textual.reactive import reactive, var
 
@@ -446,12 +441,12 @@ class FreqText(App):
         tis.client = self.client_dict[cl_name]
         self.push_screen(tis)
 
-    def action_open_link(self, link) -> None:
-        try:
-            webbrowser.open(link, new=2)
-        except Exception as e:
-            print(f"Error opening link: {e}")
-            pass
+    # def action_open_link(self, link) -> None:
+    #     try:
+    #         webbrowser.open(link, new=2)
+    #     except Exception as e:
+    #         print(f"Error opening link: {e}")
+    #         pass
 
 
 def setup(args):

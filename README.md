@@ -26,6 +26,8 @@ for running Freqtrade bots.
 Currently, FTUI is only supported on Linux systems. We hope to provide a Docker container
 in future.
 
+The easiest way to install FTUI is via pip: `pip install ftui`
+
 __Linux__
 
 FTUI can be installed into an existing venv (e.g. a existing freqtrade venv) or in a 
@@ -37,15 +39,13 @@ $ cd ftui
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip3 install -r requirements.txt
-$ pip3 install freqtrade-ftui
+$ pip3 install -e .
 ```
 
 Once installed, a `config.yaml` needs to be provided to FTUI, so create it in your new
 `ftui/` directory and edit it with a cli text editor like `nano`:
 
 ```bash
-$ pwd
-/home/froggleston/ftui
 $ touch config.yaml
 $ nano config.yaml
 ```
