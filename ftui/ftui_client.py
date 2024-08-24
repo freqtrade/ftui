@@ -9,6 +9,7 @@ from typing import Optional
 import freqtrade_client.ft_rest_client as ftrc
 import numpy as np
 import pandas as pd
+from freqtrade_client.ft_client import load_config
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -44,7 +45,7 @@ class FTUIClient:
 
     def setup_client(self):
         if self.url is None and self.port is None:
-            config = ftrc.load_config(self.config_path)
+            config = load_config(self.config_path)
             self.url = config.get("api_server", {}).get("listen_ip_address", "127.0.0.1")
             self.port = config.get("api_server", {}).get("listen_port", "8080")
 
@@ -53,7 +54,7 @@ class FTUIClient:
                 self.password = config.get("api_server", {}).get("password")
         else:
             if self.config_path is not None:
-                config = ftrc.load_config(self.config_path)
+                config = load_config(self.config_path)
 
                 if self.username is None and self.password is None:
                     self.username = config.get("api_server", {}).get("username")
