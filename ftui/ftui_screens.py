@@ -1,18 +1,15 @@
 
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 from rich.table import Table
 from rich.text import Text
-
-from textual import work, on
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
-from textual_plotext import PlotextPlot
-from textual.screen import Screen, ModalScreen
+from textual.screen import ModalScreen, Screen
 from textual.widgets import (
     Button,
     Checkbox,
@@ -33,6 +30,7 @@ from textual.widgets import (
     TabPane,
 )
 from textual.worker import get_current_worker
+from textual_plotext import PlotextPlot
 
 import ftui.ftui_client as ftuic
 import ftui.ftui_helpers as fth

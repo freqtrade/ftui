@@ -1,16 +1,12 @@
-import requests
-
 from datetime import datetime
 
 import pandas as pd
-
+import requests
 from rich import box
 from rich.table import Table
 from rich.text import Text
-
-from textual.color import Color
 from textual._color_constants import COLOR_NAME_TO_RGB
-
+from textual.color import Color
 
 
 class FtuiColours(dict[str, Color]):

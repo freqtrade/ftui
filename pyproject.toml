@@ -92,6 +92,7 @@ extend-select = [
   # "RSE",  # flake8-raise
   # "TCH",  # flake8-type-checking
   # "PTH",  # flake8-use-pathlib
+  "I",      # isort
 ]
 
 [tool.flake8]

@@ -20,12 +20,9 @@ Run with:
 import argparse
 import logging
 import sys
-
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
-
-
 from textual import work
 from textual.app import App
 from textual.logging import TextualHandler
@@ -33,12 +30,11 @@ from textual.reactive import reactive, var
 
 import ftui.ftui_client as ftuic
 import ftui.ftui_helpers as fth
-
 from ftui.ftui_screens import (
+    DashboardScreen,
     HelpScreen,
     MainBotScreen,
     SettingsScreen,
-    DashboardScreen,
     TradeInfoScreen,
 )
 
