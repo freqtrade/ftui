@@ -33,7 +33,6 @@ import ftui.ftui_helpers as fth
 from ftui.screens.dashboard_screen import DashboardScreen
 from ftui.screens.help_screen import HelpScreen
 from ftui.screens.main_bot_screen import MainBotScreen
-from ftui.screens.modal_screens import TradeInfoScreen
 from ftui.screens.settings_screen import SettingsScreen
 
 urlre = r"^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
@@ -394,18 +393,6 @@ class FreqText(App):
     # ACTIONS
     async def action_switch_ftui_mode(self, mode) -> None:
         await self.switch_mode(mode)
-
-    def action_update_chart(self, bot_id, pair) -> None:
-        self.MODES["bots"].update_chart(bot_id, pair)
-
-    def action_force_chart_refresh(self, bot_id, pair) -> None:
-        self.MODES["bots"].update_chart(bot_id, pair, refresh=True)
-
-    def action_show_trade_info_dialog(self, trade_id, cl_name) -> None:
-        tis = TradeInfoScreen()
-        tis.trade_id = trade_id
-        tis.client = self.client_dict[cl_name]
-        self.push_screen(tis)
 
 
 def setup(args):

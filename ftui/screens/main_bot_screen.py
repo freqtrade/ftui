@@ -25,6 +25,7 @@ from textual.worker import get_current_worker
 from textual_plotext import PlotextPlot
 
 import ftui.ftui_helpers as fth
+from ftui.screens.modal_screens import TradeInfoScreen
 from ftui.widgets.label_item import LabelItem
 from ftui.widgets.linkable_markdown_viewer import LinkableMarkdown
 from ftui.widgets.timed_screen import TimedScreen
@@ -154,6 +155,15 @@ class MainBotScreen(TimedScreen):
         if bot_id is not None and bot_id != "Select.BLANK":
             self.update_chart(bot_id, pair=self.prev_chart_pair)
             self.update_whitelist(bot_id)
+
+    def action_update_chart(self, bot_id, pair) -> None:
+        self.update_chart(bot_id, pair)
+
+    def action_show_trade_info_dialog(self, trade_id, cl_name) -> None:
+        tis = TradeInfoScreen()
+        tis.trade_id = trade_id
+        tis.client = self.app.client_dict[cl_name]
+        self.app.push_screen(tis)
 
     # TAB EVENT STUFF
     def _get_bot_id_from_client_list(self):
@@ -386,8 +396,8 @@ class MainBotScreen(TimedScreen):
             )
 
             render_data = (
-                f"[@click=show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
-                f"[@click=update_chart('{ftuic.name}', '{pairstr}')]{pairstr}[/]",
+                f"[@click=screen.show_trade_info_dialog('{t['trade_id']}', '{ftuic.name}')]{t['trade_id']}[/]",
+                f"[@click=screen.update_chart('{ftuic.name}', '{pairstr}')]{pairstr}[/]",
                 f"{round(t['stake_amount'], 3)}",
             )
 
@@ -441,8 +451,8 @@ class MainBotScreen(TimedScreen):
                     #     meta={"@click": f"show_trade_info_dialog('{str(v['ID'])}', '{ftuic.name}')"},
                     #     color=self.app.COLOURS['link_col']
                     # )),
-                    f"[@click=show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
-                    f"[@click=update_chart('{ftuic.name}', '{v['Pair']}')]{v['Pair']}[/]",
+                    f"[@click=screen.show_trade_info_dialog('{v['ID']}', '{ftuic.name}')]{v['ID']}[/]",
+                    f"[@click=screen.update_chart('{ftuic.name}', '{v['Pair']}')]{v['Pair']}[/]",
                     f"{v['Stake Amount']}",
                 )
 
