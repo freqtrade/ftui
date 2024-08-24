@@ -60,8 +60,8 @@ class FTUIClient:
                     self.username = config.get("api_server", {}).get("username")
                     self.password = config.get("api_server", {}).get("password")
 
-        if self.name is None:
-            self.name = f"{self.url}:{self.port}"
+        #if self.name is None:
+        #    self.name = f"{self.url}:{self.port}"
 
         server_url = f"http://{self.url}:{self.port}"
 
@@ -89,7 +89,10 @@ class FTUIClient:
 
         self.rest_client = client
         current_config = self.get_client_config()
-        self.name = current_config.get("bot_name", self.name)
+        self.name = current_config.get(
+            "bot_name",
+            f"{self.url}:{self.port}"
+        ) if self.name is None else self.name
         bot_state = current_config["state"]
         runmode = current_config["runmode"]
         strategy = current_config["strategy"]

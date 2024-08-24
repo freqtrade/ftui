@@ -30,13 +30,11 @@ from textual.reactive import reactive, var
 
 import ftui.ftui_client as ftuic
 import ftui.ftui_helpers as fth
-from ftui.ftui_screens import (
-    DashboardScreen,
-    HelpScreen,
-    MainBotScreen,
-    SettingsScreen,
-    TradeInfoScreen,
-)
+from ftui.screens.dashboard_screen import DashboardScreen
+from ftui.screens.help_screen import HelpScreen
+from ftui.screens.main_bot_screen import MainBotScreen
+from ftui.screens.modal_screens import TradeInfoScreen
+from ftui.screens.settings_screen import SettingsScreen
 
 urlre = r"^\[([a-zA-Z0-9]+)\]*([a-zA-Z0-9\-._~%!$&'()*+,;=]+)?:([ a-zA-Z0-9\-._~%!$&'()*+,;=]+)@?([a-z0-9\-._~%]+|\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\]):([0-9]+)?"
 
@@ -92,21 +90,21 @@ class FreqText(App):
 
     loglimit = 100
 
-    # setup screens
-    dash_screen = DashboardScreen()
+    # # setup screens
+    # dash_screen = DashboardScreen()
 
-    bot_screen = MainBotScreen()
+    # bot_screen = MainBotScreen()
 
-    settings_screen = SettingsScreen()
-    # settings_screen.set_settings(settings)
+    # settings_screen = SettingsScreen()
+    # # settings_screen.set_settings(settings)
 
-    help_screen = HelpScreen()
+    # help_screen = HelpScreen()
 
     MODES = {
-        "dashboard": dash_screen,
-        "bots": bot_screen,
-        "settings": settings_screen,
-        "help": help_screen,
+        "dashboard": DashboardScreen,
+        "bots": MainBotScreen,
+        "settings": SettingsScreen,
+        "help": HelpScreen,
     }
 
     # supported colours: https://textual.textualize.io/api/color/
@@ -394,36 +392,8 @@ class FreqText(App):
         self.set_class(show_clients, "-show-clients")
 
     # ACTIONS
-    async def action_switch_to_bot(self, bot_id) -> None:
-        current_screen = self.screen
-
-        for ts in current_screen.timers.keys():
-            print(f"Pausing {current_screen.id} {ts}")
-            current_screen.timers[ts].pause()
-
-        await self.switch_mode("bots")
-
-        for ts in self.MODES["bots"].timers.keys():
-            print(f"Resuming bots {ts}")
-            self.MODES["bots"].timers[ts].resume()
-
-        self.MODES["bots"].update_select_options(bot_id)
-
     async def action_switch_ftui_mode(self, mode) -> None:
-        current_screen = self.screen
-
-        for ts in current_screen.timers.keys():
-            print(f"Pausing {current_screen.id} {ts}")
-            current_screen.timers[ts].pause()
-
-        for ts in self.MODES[mode].timers.keys():
-            print(f"Resuming {mode} {ts}")
-            self.MODES[mode].timers[ts].resume()
-
         await self.switch_mode(mode)
-
-        if mode == "bots":
-            self.MODES["bots"].update_select_options()
 
     def action_update_chart(self, bot_id, pair) -> None:
         self.MODES["bots"].update_chart(bot_id, pair)
@@ -437,13 +407,6 @@ class FreqText(App):
         tis.client = self.client_dict[cl_name]
         self.push_screen(tis)
 
-    # def action_open_link(self, link) -> None:
-    #     try:
-    #         webbrowser.open(link, new=2)
-    #     except Exception as e:
-    #         print(f"Error opening link: {e}")
-    #         pass
-
 
 def setup(args):
     config = args.config
@@ -455,7 +418,7 @@ def setup(args):
         for s in args.servers:
             try:
                 ftui_client = ftuic.FTUIClient(
-                    name=s["name"],
+                    name=s["name"] if "name" in s else None,
                     url=s["ip"],
                     port=s["port"],
                     username=s["username"],
