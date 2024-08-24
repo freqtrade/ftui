@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -39,7 +38,6 @@ from ftui.widgets.linkable_markdown_viewer import LinkableMarkdown
 
 
 class DashboardScreen(Screen):
-
     timers = {}
 
     COLLAP_FUNC_MAP = {
@@ -153,8 +151,8 @@ class DashboardScreen(Screen):
                 f"{round(v['Open Rate'], 3)}",
                 f"{v['Current Rate']}",
                 fth.red_or_green(float(v["Stop %"])),
-                fth.red_or_green(float(v['Max %']), justify='left'),
-                fth.red_or_green(float(v['Profit %']), justify='right'),
+                fth.red_or_green(float(v["Max %"]), justify="left"),
+                fth.red_or_green(float(v["Profit %"]), justify="right"),
                 fth.red_or_green(float(v["Profit"]), justify="left"),
                 str(v["Dur."]).split(".")[0].replace("0 days ", ""),
                 f"{v['S/L']}",
@@ -483,7 +481,6 @@ class DashboardScreen(Screen):
 
 
 class MainBotScreen(Screen):
-
     timers = {}
 
     TAB_FUNC_MAP = {
@@ -531,7 +528,6 @@ class MainBotScreen(Screen):
                         yield PlotextPlot(id="bot-chart", classes="bg-static-default")
 
                 with TabbedContent(initial="open-trades-tab"):
-
                     with TabPane("Open Trades", id="open-trades-tab"):
                         yield Static(id="open-trades-table", classes="bg-static-default")
 
@@ -821,7 +817,7 @@ class MainBotScreen(Screen):
                 t["has_open_orders"] if "has_open_orders" in t else (t["open_order_id"] is not None)
             )
 
-            num_orders = len(t['orders']) if 'orders' in t else 0
+            num_orders = len(t["orders"]) if "orders" in t else 0
 
             suff = ""
             if open_orders and t["close_rate_requested"] is None:
@@ -1322,7 +1318,6 @@ class MainBotScreen(Screen):
 
 
 class SettingsScreen(Screen):
-
     timers = {}
 
     def compose(self) -> ComposeResult:
@@ -1377,14 +1372,13 @@ class SettingsScreen(Screen):
                         for server in s[setting]:
                             t = Checkbox(
                                 f"{server['name']} [{server['ip']}:{server['port']}]",
-                                server["enabled"],
+                                server.get("enabled", True),
                             )
                             c.mount(t)
                         settings_left.mount(c)
 
 
 class HelpScreen(Screen):
-
     timers = {}
 
     help_file_path = Path(__file__).parent / "md" / "help.md"
@@ -1473,7 +1467,6 @@ class TradeInfoScreen(BasicModal):
                 yield Static("[Esc] to close")
 
     def build_trade_info(self, trade_info):
-
         main_text = (
             f"[b]Trade Id     : {self.trade_id}\n"
             f"[b]Pair         : {trade_info['pair']}\n"
