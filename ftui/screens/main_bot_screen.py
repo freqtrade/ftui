@@ -31,8 +31,6 @@ from ftui.widgets.timed_screen import TimedScreen
 
 
 class MainBotScreen(TimedScreen):
-    timers = {}
-
     TAB_FUNC_MAP = {
         # tabs
         "open-trades-tab": "update_open_trades_tab",

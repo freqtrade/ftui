@@ -22,8 +22,6 @@ from ftui.widgets.timed_screen import TimedScreen
 
 
 class DashboardScreen(TimedScreen):
-
-
     COLLAP_FUNC_MAP = {
         # collapsibles
         "dsh-cp-collap": "update_cumulative_profit_plot",
