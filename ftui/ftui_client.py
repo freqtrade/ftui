@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """A wrapper for the FtRestClient for use in the FTUI"""
 
+import logging
 import sys
 from time import sleep
-import logging
-
-import pandas as pd
-import numpy as np
+from typing import Optional
 
 import freqtrade_client.ft_rest_client as ftrc
+import numpy as np
+import pandas as pd
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -18,8 +18,16 @@ logger = logging.getLogger("ftui_client")
 
 
 class FTUIClient:
-
-    def __init__(self, name, url, port, username, password, config_path=None):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        url: Optional[str] = None,
+        port: Optional[str] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        *,
+        config_path=None,
+    ):
         self.name = name
         self.url = url
         self.port = port
