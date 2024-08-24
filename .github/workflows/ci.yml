@@ -40,6 +40,10 @@ jobs:
         pip install -r requirements.txt
         pip install ruff
 
+    - name: Test execution (for now with `--help`)
+      run: |
+        ftui --help
+
     - name: Run Ruff
       run: |
         ruff check --output-format=github
