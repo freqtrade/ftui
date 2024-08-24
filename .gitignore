@@ -130,4 +130,5 @@ dmypy.json
 
 # ignore local yaml, keep example
 *.yaml
+*.yml
 !example.yaml
