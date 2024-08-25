@@ -13,7 +13,7 @@ from ftui.widgets.linkable_markdown_viewer import LinkableMarkdown
 
 
 class HelpScreen(Screen):
-    help_file_path = Path(__file__).parent / "md" / "help.md"
+    help_file_path = Path(__file__).parent.parent / "md" / "help.md"
 
     header_str = """
     ███████╗████████╗██╗   ██╗██╗
