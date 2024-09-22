@@ -124,13 +124,13 @@ class MainBotScreen(TimedScreen):
         self.update_select_options()
 
         update_one_sec_render = self.set_interval(1, self.update_per_sec)
-        self.timers["1sec"] = update_one_sec_render
+        self.register_timer(f"{self.__class__.__name__}_1sec", update_one_sec_render)
 
         update_five_sec_render = self.set_interval(5, self.update_per_five_sec)
-        self.timers["5sec"] = update_five_sec_render
+        self.register_timer(f"{self.__class__.__name__}_5sec", update_five_sec_render)
 
         update_one_min_render = self.set_interval(60, self.update_per_one_min)
-        self.timers["1min"] = update_one_min_render
+        self.register_timer(f"{self.__class__.__name__}_1min", update_one_min_render)
 
     async def update_per_sec(self):
         bot_id = self._get_bot_id_from_client_list()
@@ -385,10 +385,12 @@ class MainBotScreen(TimedScreen):
             pairstr = f"{t['pair']}{suff}"
             rpfta = round(float(t["profit_abs"]), 2)
             t_dir = "S" if t["is_short"] else "L"
-            stop_profit = round(
-                ((t["stop_loss_abs"] - t["open_rate"]) / t["stop_loss_abs"]) * 100, 2
-            )
 
+            stop_profit = "--- "
+            if t["stop_loss_abs"] is not None and t["stop_loss_abs"] != 0:
+                stop_profit = round(
+                    ((t["stop_loss_abs"] - t["open_rate"]) / t["stop_loss_abs"]) * 100, 2
+                )
             stp_txt = (
                 f"{t['stop_loss_abs']} [red]({stop_profit}%)"
                 if stop_profit <= 0

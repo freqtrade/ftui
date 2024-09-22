@@ -88,10 +88,10 @@ class DashboardScreen(TimedScreen):
             sd.loading = True
 
         update_one_sec_render = self.set_interval(1, self.update_per_sec)
-        self.timers["1sec"] = update_one_sec_render
+        self.register_timer(f"{self.__class__.__name__}_1sec", update_one_sec_render)
 
         update_five_sec_render = self.set_interval(5, self.update_per_five_sec)
-        self.timers["5sec"] = update_five_sec_render
+        self.register_timer(f"{self.__class__.__name__}_5sec", update_five_sec_render)
 
     async def update_per_sec(self):
         self.update_dashboard_all_bot_summary()
