@@ -12,7 +12,6 @@ from textual.widgets import (
     Footer,
     Header,
     Label,
-    ListView,
     SelectionList,
     Static,
 )
@@ -21,7 +20,6 @@ from textual.worker import get_current_worker
 from textual_plotext import PlotextPlot
 
 import ftui.ftui_helpers as fth
-from ftui.widgets.label_item import LabelItem
 from ftui.widgets.timed_screen import TimedScreen
 
 
