@@ -54,6 +54,17 @@ DataTable {
     /* margin: 2 2; */
 }
 
+#dsh-chart-bot-list {
+    dock: left;
+    width: 20;
+    height: 32;
+    overflow: auto;
+    height: 1fr;
+    border: darkgray;
+    /* scrollbar-gutter: stable; */
+    /* margin: 2 2; */
+}
+
 ListView Label {
     padding: 1 2;
 }
@@ -96,7 +107,6 @@ ListView Label {
 
 #dash-collapsibles Collapsible Container {
     padding-top: 1;
-    margin-left: -1;
     margin-right: -1;
 }
 
@@ -110,11 +120,15 @@ ListView Label {
     scrollbar-gutter: stable;
 }
 
+#dsh-chart-container {
+    height: 32;
+    padding-left: 2;
+}
+
 #dash-cumprof-profit {
     height: 32;
     width: 100%;
-    padding-left: 1;
-    padding-right: 1;
+    padding-right: 2;
     overflow: auto;
     scrollbar-gutter: stable;
 }

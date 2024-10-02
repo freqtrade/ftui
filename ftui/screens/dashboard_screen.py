@@ -12,12 +12,16 @@ from textual.widgets import (
     Footer,
     Header,
     Label,
+    ListView,
+    SelectionList,
     Static,
 )
+from textual.widgets.selection_list import Selection
 from textual.worker import get_current_worker
 from textual_plotext import PlotextPlot
 
 import ftui.ftui_helpers as fth
+from ftui.widgets.label_item import LabelItem
 from ftui.widgets.timed_screen import TimedScreen
 
 
@@ -61,14 +65,16 @@ class DashboardScreen(TimedScreen):
 
                 with Container(id="dash-collapsibles"):
                     with Collapsible(title="All Open Trades", id="dsh-op-collap", collapsed=False):
-                        yield Static(id="all-open-trades-table", classes="bg-static-default")
+                        yield Static(id="all-open-trades-table", classes="bg-static-default collap-update")
 
                     with Collapsible(title="All Closed Trades", id="dsh-cl-collap", collapsed=True):
                         with Container(id="dash-closed-profit-container"):
-                            yield Static(id="dash-closed-profit", classes="bg-static-default")
+                            yield Static(id="dash-closed-profit", classes="bg-static-default collap-update")
 
                     with Collapsible(title="Cumulative Profit", id="dsh-cp-collap", collapsed=True):
-                        yield PlotextPlot(id="dash-cumprof-profit", classes="bg-static-default")
+                        with Container(id="dsh-chart-container"):
+                            yield SelectionList(id="dsh-chart-bot-list", classes="bg-static-default")
+                            yield PlotextPlot(id="dash-cumprof-profit", classes="bg-static-default collap-update")
 
                     # with Collapsible(title="Daily Trade Summary",
                     #                  id="dsh-dt-collap",
@@ -86,6 +92,12 @@ class DashboardScreen(TimedScreen):
         summary_digits = self.query_one("#above").query(Digits)
         for sd in summary_digits:
             sd.loading = True
+
+        dsh_chart_bot_list = self.query_one("#dsh-chart-bot-list")
+        for n, cl in self.app.client_dict.items():
+            dsh_chart_bot_list.add_option(
+                Selection(n, n, True)
+            )
 
         update_one_sec_render = self.set_interval(1, self.update_per_sec)
         self.register_timer(f"{self.__class__.__name__}_1sec", update_one_sec_render)
@@ -109,7 +121,8 @@ class DashboardScreen(TimedScreen):
 
         dsh_cp_collap = self.query_one("#dsh-cp-collap")
         if dsh_cp_collap.collapsed is False:
-            self.update_cumulative_profit_plot()
+            selected_bots = self.query_one("#dsh-chart-bot-list").selected
+            self.update_cumulative_profit_plot(bot_list = selected_bots)
 
     def _render_open_trade_data(self, data, trading_mode="spot"):
         row_data = []
@@ -410,46 +423,64 @@ class DashboardScreen(TimedScreen):
         ats.loading = False
 
     @work(group="dash_chart_worker", exclusive=True, thread=True)
-    def update_cumulative_profit_plot(self):
+    def update_cumulative_profit_plot(self, bot_list=None):
         client_dfs = self.app.client_dfs
 
         all_cum_data = pd.DataFrame()
         if "all_closed" in client_dfs:
-            all_cum_data = fth.dash_cumulative_profit_plot_data(client_dfs["all_closed"])
-
-            if "plot_cumprof" in all_cum_data.columns:
-                chart_container = self.query_one("#dash-cumprof-profit")
-                cplt = chart_container.plt
-                dfmt = "Y-m-d"
-                cplt.date_form(dfmt)
-
-                all_cum_data.index = all_cum_data.index.tz_localize(None)
-
-                dates = cplt.datetimes_to_string(all_cum_data.index)
-
-                cplt.plot(
-                    dates,
-                    all_cum_data["plot_cumprof"].values,
-                    color=self.app.COLOURS.profit_chart_col,
+            if bot_list is None or not bot_list:
+                all_cum_data = fth.dash_cumulative_profit_plot_data(
+                    client_dfs["all_closed"]
+                )
+            else:
+                all_cum_data = fth.dash_cumulative_profit_plot_data(
+                    client_dfs["all_closed"],
+                    bot_list=bot_list
                 )
 
-                cplt.ylim(
-                    all_cum_data["plot_cumprof"].min() * 0.99,
-                    all_cum_data["plot_cumprof"].max() * 1.01,
-                )
-                cplt.ylabel("Profit")
+        if "plot_cumprof" in all_cum_data.columns:
+            chart_container = self.query_one("#dash-cumprof-profit")
+            cplt = chart_container.plt
+            cplt.clear_data()
 
-                worker = get_current_worker()
-                if not worker.is_cancelled:
-                    self.app.call_from_thread(chart_container.refresh)
-                chart_container.loading = False
+            dfmt = "Y-m-d"
+            cplt.date_form(dfmt)
+
+            all_cum_data.index = all_cum_data.index.tz_localize(None)
+
+            dates = cplt.datetimes_to_string(all_cum_data.index)
+
+            cplt.plot(
+                dates,
+                all_cum_data["plot_cumprof"].values,
+                color=self.app.COLOURS.profit_chart_col,
+            )
+
+            cplt.ylim(
+                all_cum_data["plot_cumprof"].min() * 0.99,
+                all_cum_data["plot_cumprof"].max() * 1.01,
+            )
+            cplt.ylabel("Profit")
+
+            worker = get_current_worker()
+            if not worker.is_cancelled:
+                self.app.call_from_thread(chart_container.refresh)
+            chart_container.loading = False
+
+    @on(SelectionList.SelectedChanged)
+    def update_cum_plot_from_list(self) -> None:
+        chart_container = self.query_one("#dash-cumprof-profit")
+        chart_container.loading = True
+
+        selected_bots = self.query_one("#dsh-chart-bot-list").selected
+        self.update_cumulative_profit_plot(bot_list = selected_bots)
 
     @on(Collapsible.Toggled)
     def toggle_collapsible(self, event: Collapsible.Toggled) -> None:
         event.stop()
         collap = event.collapsible
 
-        collap_children = collap.query().filter(".bg-static-default")
+        collap_children = collap.query().filter(".collap-update")
 
         if collap.collapsed is False:
             for child in collap_children:

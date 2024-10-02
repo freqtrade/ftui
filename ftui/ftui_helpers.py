@@ -255,10 +255,11 @@ def dash_closed_trades_table(row_data, colours=FtuiColours()) -> Table:
     return table
 
 
-def dash_cumulative_profit_plot_data(trades, bot=None, pair=None):
-    if trades.shape[0] > 0 and bot is not None:
-        # Filter trades to one bot
-        trades = trades.loc[trades["Bot"] == bot].copy()
+def dash_cumulative_profit_plot_data(trades, bot_list=[], pair=None):
+    if trades.shape[0] > 0 and bot_list:
+        # Filter trades to what's in the bot_list
+        # trades = trades.loc[trades["Bot"] == bot].copy()
+        trades = trades.loc[trades['Bot'].apply(lambda x: x in bot_list)].copy()
 
         # Filter trades to one pair
         if pair is not None:
