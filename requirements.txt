@@ -4,5 +4,6 @@ requests
 python-rapidjson
 PyYaml
 textual>=0.55.1
+plotext==5.2.8
 textual_plotext
 freqtrade-client
