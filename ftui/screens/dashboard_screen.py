@@ -104,6 +104,9 @@ class DashboardScreen(TimedScreen):
         self.register_timer(f"{self.__class__.__name__}_5sec", update_five_sec_render)
 
     async def update_per_sec(self):
+        if not self.screen.is_active:
+            return
+
         self.update_dashboard_all_bot_summary()
 
         dsh_op_collap = self.query_one("#dsh-op-collap")
@@ -111,6 +114,9 @@ class DashboardScreen(TimedScreen):
             self.update_dashboard_all_open_trades()
 
     async def update_per_five_sec(self):
+        if not self.screen.is_active:
+            return
+
         self.update_dashboard_all_trade_summary()
 
         dsh_cl_collap = self.query_one("#dsh-cl-collap")

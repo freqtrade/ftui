@@ -133,6 +133,9 @@ class MainBotScreen(TimedScreen):
         self.register_timer(f"{self.__class__.__name__}_1min", update_one_min_render)
 
     async def update_per_sec(self):
+        if not self.screen.is_active:
+            return
+
         bot_id = self._get_bot_id_from_client_list()
 
         if bot_id is not None and bot_id != "Select.BLANK":
@@ -143,6 +146,9 @@ class MainBotScreen(TimedScreen):
                 self.update_open_trades_tab(tab_id, bot_id)
 
     async def update_per_five_sec(self):
+        if not self.screen.is_active:
+            return
+
         bot_id = self._get_bot_id_from_client_list()
 
         if bot_id is not None and bot_id != "Select.BLANK":
@@ -151,6 +157,9 @@ class MainBotScreen(TimedScreen):
                 getattr(self, self.TAB_FUNC_MAP[tab_id])(tab_id, bot_id)
 
     async def update_per_one_min(self):
+        if not self.screen.is_active:
+            return
+
         bot_id = self._get_bot_id_from_client_list()
         if bot_id is not None and bot_id != "Select.BLANK":
             self.update_chart(bot_id, pair=self.prev_chart_pair)
