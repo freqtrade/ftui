@@ -468,8 +468,7 @@ class DashboardScreen(TimedScreen):
 
             worker = get_current_worker()
             if not worker.is_cancelled:
-                self.app.call_from_thread(chart_container.refresh)
-            chart_container.loading = False
+                self.app.call_from_thread(chart_container.set_loading, False)
 
     @on(SelectionList.SelectedChanged)
     def update_cum_plot_from_list(self) -> None:

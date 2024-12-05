@@ -188,6 +188,9 @@ class MainBotScreen(TimedScreen):
         bot_id = self._get_bot_id_from_client_list()
 
         chart_container = self.query_one("#bot-chart")
+        #worker = get_current_worker()
+        #if not worker.is_cancelled:
+        #    self.app.call_from_thread(chart_container.loading, True)
         chart_container.loading = True
         self.update_chart(bot_id, pair=self.prev_chart_pair, refresh=True)
 
@@ -564,7 +567,10 @@ class MainBotScreen(TimedScreen):
 
         ckey = f"{pair}_{cl.get_client_config()['timeframe']}"
         if ckey not in self.chart_data or refresh:
-            chart_container.loading = True
+            worker = get_current_worker()
+            if not worker.is_cancelled:
+                self.app.call_from_thread(chart_container.set_loading, True)
+
             data = cl.get_pair_dataframe(pair, limit=min(max(round(cw / 2), 50), 200))
             if data is not None and not data.empty:
                 self.chart_data[ckey] = data[["date", "Open", "Close", "High", "Low"]]
@@ -588,7 +594,10 @@ class MainBotScreen(TimedScreen):
                     data["date"] > last_date
                 ]
                 if not new_data.empty:
-                    chart_container.loading = True
+                    worker = get_current_worker()
+                    if not worker.is_cancelled:
+                        self.app.call_from_thread(chart_container.set_loading, True)
+
                     self.chart_data[ckey] = pd.concat([self.chart_data[ckey], new_data])
                     self.chart_data[ckey].drop(self.chart_data[ckey].head(1).index, inplace=True)
 
@@ -735,6 +744,10 @@ class MainBotScreen(TimedScreen):
                     title=f"Error: No data available for {pair}",
                     severity="warning",
                 )
+
+        #worker = get_current_worker()
+        #if not worker.is_cancelled:
+        #    self.app.call_from_thread(chart_container.loading, False)
         chart_container.loading = False
 
     # bot performance tab
