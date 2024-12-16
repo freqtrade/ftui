@@ -35,8 +35,9 @@ dependencies = [
     'requests',
     'python-rapidjson',
     'PyYaml',
-    'textual>=0.55.1',
-    'textual_plotext',
+    'textual==0.85.0',
+    'plotext==5.2.8',
+    'textual_plotext==0.2.1',
     'freqtrade-client',
 ]
 
