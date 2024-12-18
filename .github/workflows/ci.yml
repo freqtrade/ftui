@@ -91,6 +91,8 @@ jobs:
       uses: pypa/gh-action-pypi-publish@v1.12.3
       with:
         repository-url: https://test.pypi.org/legacy/
+        skip-existing: true
+        attestations: false # https://github.com/pypa/gh-action-pypi-publish/issues/283#issuecomment-2499296440
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@v1.12.3
