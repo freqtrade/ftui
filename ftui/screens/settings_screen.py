@@ -31,12 +31,12 @@ class SettingsScreen(Screen):
 
         yield Footer()
 
-    #def on_mount(self):
-    #    self.update_settings(self.app.settings)
+    def on_mount(self):
+       self.update_settings(self.app.settings)
 
-    @on(ScreenResume)
-    def on_resume(self):
-        self.update_settings(self.app.settings)
+    # @on(ScreenResume)
+    # def on_resume(self):
+    #     self.update_settings(self.app.settings)
 
     @on(Button.Pressed, "#bot-save-settings-button")
     def save_settings_button_pressed(self) -> None:
@@ -58,7 +58,7 @@ class SettingsScreen(Screen):
                     settings_right.mount(c)
                 elif isinstance(s[setting], str):
                     # output textbox
-                    c = Horizontal(id=f"settings-{setting}")
+                    c = Horizontal(id=f"settings-txt-{setting}")
                     c.mount(Label(setting), Input(s[setting]))
                     settings_right.mount(c)
                 elif isinstance(s[setting], dict):
@@ -67,12 +67,15 @@ class SettingsScreen(Screen):
                 elif isinstance(s[setting], list):
                     if setting == "servers":
                         # output server list
-                        c = Container(id=f"settings-{setting}")
-                        settings_left.mount(c)
+                        try:
+                            settings_servers = self.query_one(f"#settings-{setting}")
+                        except Exception:
+                            settings_servers = Container(id=f"settings-{setting}")
+                            settings_left.mount(settings_servers)
 
                         for server in s[setting]:
                             t = Checkbox(
                                 f"{server['name']} [{server['ip']}:{server['port']}]",
                                 server.get("enabled", True),
                             )
-                            c.mount(t)
+                            settings_servers.mount(t)
