@@ -201,6 +201,19 @@ ListView Label {
     link-color: goldenrod;
 }
 
+#dsh-chart-header {
+    dock: top;
+    height: 1;
+    background: #222;
+}
+
+#dash-refresh-chart-button {
+    dock: right;
+    height: 1;
+    border: none;
+    margin-right: 1;
+}
+
 #bot-chart-header {
     dock: top;
     height: 1;

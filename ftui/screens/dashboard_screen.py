@@ -5,8 +5,9 @@ from rich.table import Table
 from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Horizontal
 from textual.widgets import (
+    Button,
     Collapsible,
     Digits,
     Footer,
@@ -71,6 +72,10 @@ class DashboardScreen(TimedScreen):
 
                     with Collapsible(title="Cumulative Profit", id="dsh-cp-collap", collapsed=True):
                         with Container(id="dsh-chart-container"):
+                            with Horizontal(id="dsh-chart-header"):
+                                yield Button(
+                                    "Refresh", id="dash-refresh-chart-button", variant="success"
+                                )
                             yield SelectionList(id="dsh-chart-bot-list", classes="bg-static-default")
                             yield PlotextPlot(id="dash-cumprof-profit", classes="bg-static-default collap-update")
 
@@ -125,8 +130,7 @@ class DashboardScreen(TimedScreen):
 
         dsh_cp_collap = self.query_one("#dsh-cp-collap")
         if dsh_cp_collap.collapsed is False:
-            selected_bots = self.query_one("#dsh-chart-bot-list").selected
-            self.update_cumulative_profit_plot(bot_list = selected_bots)
+            self.update_cumulative_profit_plot()
 
     def _render_open_trade_data(self, data, trading_mode="spot"):
         row_data = []
@@ -426,9 +430,11 @@ class DashboardScreen(TimedScreen):
         ats = self.query_one("#dash-all-trade-summary")
         ats.loading = False
 
-    @work(group="dash_chart_worker", exclusive=True, thread=True)
+    @work(group="dash_chart_worker", exclusive=False, thread=True)
     def update_cumulative_profit_plot(self, bot_list=None):
         client_dfs = self.app.client_dfs
+
+        bot_list = self.query_one("#dsh-chart-bot-list").selected
 
         all_cum_data = pd.DataFrame()
         if "all_closed" in client_dfs:
@@ -446,6 +452,7 @@ class DashboardScreen(TimedScreen):
             chart_container = self.query_one("#dash-cumprof-profit")
             cplt = chart_container.plt
             cplt.clear_data()
+            cplt.clf()
 
             dfmt = "Y-m-d"
             cplt.date_form(dfmt)
@@ -466,6 +473,8 @@ class DashboardScreen(TimedScreen):
             )
             cplt.ylabel("Profit")
 
+            self.app.call_from_thread(chart_container.refresh)
+
             worker = get_current_worker()
             if not worker.is_cancelled:
                 self.app.call_from_thread(chart_container.set_loading, False)
@@ -474,9 +483,11 @@ class DashboardScreen(TimedScreen):
     def update_cum_plot_from_list(self) -> None:
         chart_container = self.query_one("#dash-cumprof-profit")
         chart_container.loading = True
+        self.update_cumulative_profit_plot()
 
-        selected_bots = self.query_one("#dsh-chart-bot-list").selected
-        self.update_cumulative_profit_plot(bot_list = selected_bots)
+    @on(Button.Pressed, "#dash-refresh-chart-button")
+    def refresh_dash_chart_button_pressed(self) -> None:
+        self.update_cum_plot_from_list()
 
     @on(Collapsible.Toggled)
     def toggle_collapsible(self, event: Collapsible.Toggled) -> None:

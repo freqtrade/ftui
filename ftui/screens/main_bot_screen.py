@@ -532,7 +532,7 @@ class MainBotScreen(TimedScreen):
             self.app.call_from_thread(dt.update, table)
         dt.loading = False
 
-    @work(group="bot_chart_worker", exclusive=True, thread=True)
+    @work(group="bot_chart_worker", exclusive=False, thread=True)
     def update_chart(self, bot_id, pair=None, refresh=False):
         client_dict = self.app.client_dict
         client_dfs = self.app.client_dfs
@@ -745,10 +745,7 @@ class MainBotScreen(TimedScreen):
                     severity="warning",
                 )
 
-        #worker = get_current_worker()
-        #if not worker.is_cancelled:
-        #    self.app.call_from_thread(chart_container.loading, False)
-        chart_container.loading = False
+        self.app.call_from_thread(chart_container.set_loading, False)
 
     # bot performance tab
     @work(group="perf_summary_worker", exclusive=True, thread=True)
