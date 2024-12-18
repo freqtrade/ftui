@@ -1,7 +1,6 @@
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
-from textual.events import ScreenResume
 from textual.screen import Screen
 from textual.widgets import (
     Button,
