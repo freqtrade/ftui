@@ -199,3 +199,25 @@ This README!
 - When the bot is been running and you put your PC to sleep, the async worker will bug out
   and intermittently crash the UI.
 - The Settings screen save functionality is currently disabled.
+
+### urllib pool connection errors
+
+When running a larger number of bots within one FTUI instance, you may see urllib/requests 
+warnings about the pool connections being exhausted:
+
+`connection pool is full, discarding connection: 127.0.0.1.  Connection pools size: 10`
+
+Raising the pool size limits can help avoid these warnings.
+
+There are two command line/yaml config options that can be adjusted:
+
+#### CLI
+
+`ftui -c config.json --pool_connections 20 --pool_maxsize 15`
+
+#### YAML config
+
+```yaml
+pool_connections: 20
+pool_maxsize: 15
+```
