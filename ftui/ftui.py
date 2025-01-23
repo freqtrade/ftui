@@ -401,6 +401,14 @@ def setup(args):
 
     print(__doc__)
 
+    pool_connections = 20
+    if args.pool_connections:
+        pool_connections = args.pool_connections
+
+    pool_maxsize = 10
+    if args.pool_maxsize:
+        pool_maxsize = args.pool_maxsize
+
     if args.yaml:
         for s in args.servers:
             try:
@@ -411,6 +419,8 @@ def setup(args):
                     username=s["username"],
                     password=s["password"],
                     config_path=config,
+                    pool_connections=pool_connections,
+                    pool_maxsize=pool_maxsize,
                 )
 
                 client_dict[ftui_client.name] = ftui_client
@@ -419,7 +429,11 @@ def setup(args):
     else:
         if config is not None:
             try:
-                ftui_client = ftuic.FTUIClient(config_path=config)
+                ftui_client = ftuic.FTUIClient(
+                    config_path=config,
+                    pool_connections=pool_connections,
+                    pool_maxsize=pool_maxsize,
+                )
                 client_dict[ftui_client.name] = ftui_client
             except Exception as e:
                 raise RuntimeError("Cannot create freqtrade client") from e
@@ -439,6 +453,8 @@ def main():
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose debugging mode")
 
     parser.add_argument("-c", "--config", nargs="?", help="Config to parse")
+    parser.add_argument("--pool_connections", nargs="?", default=20, help="Number of pool connections")
+    parser.add_argument("--pool_maxsize", nargs="?", default=10, help="Pool cache maxsize")
 
     parser.add_argument(
         "-y", "--yaml", nargs="?", help="Supply a YAML file instead of command line arguments."

@@ -28,6 +28,8 @@ class FTUIClient:
         password: Optional[str] = None,
         *,
         config_path=None,
+        pool_connections=20,
+        pool_maxsize=10,
     ):
         self.name = name
         self.url = url
@@ -37,6 +39,8 @@ class FTUIClient:
         self.config_path = config_path
         self.rest_client = None
         self.config = None
+        self.pool_connections = pool_connections
+        self.pool_maxsize = pool_maxsize
 
         self.prev_closed_trade_count = 0
         self.all_closed_trades = []
@@ -65,7 +69,11 @@ class FTUIClient:
 
         server_url = f"http://{self.url}:{self.port}"
 
-        client = ftrc.FtRestClient(server_url, self.username, self.password)
+        client = ftrc.FtRestClient(server_url,
+                                   self.username,
+                                   self.password,
+                                   pool_connections=self.pool_connections,
+                                   pool_maxsize=self.pool_maxsize)
 
         if client is not None:
             c = client.version()
