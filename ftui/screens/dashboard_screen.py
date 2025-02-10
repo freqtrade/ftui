@@ -286,7 +286,7 @@ class DashboardScreen(TimedScreen):
         all_open_df = pd.DataFrame()
         for n, cl in client_dict.items():
             # if any bots are in futures mode, add leverage column
-            tm = cl.get_client_config().get("trading_mode")
+            tm = cl.get_client_config().get("trading_mode", "spot")
             if tm != "spot":
                 trading_mode = tm
             if cl.name in client_dfs and "op_data" in client_dfs[cl.name]:
