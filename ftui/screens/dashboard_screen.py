@@ -281,18 +281,26 @@ class DashboardScreen(TimedScreen):
         client_dict = self.app.client_dict
         client_dfs = self.app.client_dfs
 
+        trading_mode = "spot"
+
         all_open_df = pd.DataFrame()
         for n, cl in client_dict.items():
+            # if any bots are in futures mode, add leverage column
+            tm = cl.get_client_config().get("trading_mode")
+            if tm != "spot":
+                trading_mode = tm
             if cl.name in client_dfs and "op_data" in client_dfs[cl.name]:
                 data = client_dfs[cl.name]["op_data"].copy()
                 if not data.empty:
                     all_open_df = pd.concat([all_open_df, data])
 
-        row_data = self._render_open_trade_data(all_open_df)
+        row_data = self._render_open_trade_data(
+            all_open_df, trading_mode=trading_mode
+        )
 
         dt = self.query_one("#all-open-trades-table")
         table = fth.dash_open_trades_table(
-            row_data, trading_mode=cl.get_client_config().get("trading_mode")
+            row_data, trading_mode=trading_mode
         )
 
         worker = get_current_worker()
