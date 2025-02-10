@@ -19,3 +19,7 @@ servers:
       port        : 8080
 
 debug: False
+
+# only uncomment these options if you are receiving urllib warnings about connection pool full
+# pool_connections: 30
+# pool_maxsize: 20
