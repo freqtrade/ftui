@@ -471,7 +471,7 @@ class MainBotScreen(TimedScreen):
                 )
 
                 if ftuic.get_client_config().get("trading_mode") != "spot":
-                    render_data = render_data + (f"{v['Leverage']}")
+                    render_data = render_data + (f"{v['Leverage']}",)
 
                 render_data = render_data + (
                     fth.red_or_green(float(v["Profit %"]), justify="right"),
