@@ -147,7 +147,7 @@ class DashboardScreen(TimedScreen):
             )
 
             if trading_mode != "spot":
-                render_data = render_data + (f"{v['Leverage']}")
+                render_data = render_data + (f"{v['Leverage']}",)
 
             render_data = render_data + (
                 f"{v['# Orders']}",
