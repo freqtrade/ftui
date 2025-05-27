@@ -264,11 +264,14 @@ def dash_cumulative_profit_plot_data(trades, bot_list=[], pair=None):
         if pair is not None:
             trades = trades.loc[trades["Pair"] == pair].copy()
 
-    s = trades.resample("D", on="Open Date")["Profit"].sum()
-
-    data = pd.DataFrame(index=s.index, data={"binned": s.values})
-    data["plot_cumprof"] = data["binned"].cumsum().round(2)
-    data["plot_cumprof"].ffill(inplace=True)
+    if trades.shape[0] > 0 and "Open Date" in trades.columns:
+        s = trades.resample("D", on="Open Date")["Profit"].sum()
+    
+        data = pd.DataFrame(index=s.index, data={"binned": s.values})
+        data["plot_cumprof"] = data["binned"].cumsum().round(2)
+        data["plot_cumprof"].ffill(inplace=True)
+    else:
+        data = pd.DataFrame()
 
     return data
 
