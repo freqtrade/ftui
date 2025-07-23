@@ -156,9 +156,7 @@ class FreqText(App):
                 pairstr = f"{t['pair']}{suff}"
                 rpfta = round(float(t["profit_abs"]), 2)
                 t_dir = "S" if t["is_short"] else "L"
-                stop_profit = round(
-                    ((t["stop_loss_abs"] - t["open_rate"]) / t["stop_loss_abs"]) * 100, 2
-                )
+                stop_profit = t['stop_loss_pct']
 
                 max_profit = 0
                 if t["max_rate"] is not None and t['max_rate'] != 0:
