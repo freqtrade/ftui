@@ -312,12 +312,14 @@ class DashboardScreen(TimedScreen):
     def update_dashboard_all_closed_trades(self, num_closed_trades=5) -> Table:
         client_dict = self.app.client_dict
         client_dfs = self.app.client_dfs
+        num_clients = len(client_dict)
+        num_trades_per_bot = max(round(32 / num_clients), num_closed_trades) if num_clients > 0 else num_closed_trades
 
         all_closed_df = pd.DataFrame()
         for n, cl in client_dict.items():
             if cl.name in client_dfs and "cl_data" in client_dfs[cl.name]:
                 data = client_dfs[cl.name]["cl_data"].copy()
-                all_closed_df = pd.concat([all_closed_df, data[:num_closed_trades]])
+                all_closed_df = pd.concat([all_closed_df, data[:num_trades_per_bot]])
 
         row_data = self._render_closed_trade_data(all_closed_df)
 

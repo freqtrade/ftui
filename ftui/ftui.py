@@ -156,13 +156,25 @@ class FreqText(App):
                 pairstr = f"{t['pair']}{suff}"
                 rpfta = round(float(t["profit_abs"]), 2)
                 t_dir = "S" if t["is_short"] else "L"
-                stop_profit = t['stop_loss_pct']
+                stop_profit = round(t['stop_loss_pct'], 2)
 
                 max_profit = 0
-                if t["max_rate"] is not None and t['max_rate'] != 0:
-                    max_profit = round(
-                        ((t["max_rate"] - t["open_rate"]) / t["max_rate"]) * 100, 2
-                    )
+
+                if num_orders == 1:
+                    if t["max_rate"] is not None and t['max_rate'] != 0:
+                        max_profit = round(
+                            ((t["max_rate"] - t["open_rate"]) / t["max_rate"]) * 100, 2
+                        )
+                elif num_orders > 1:
+                    max_profits = []
+                    for o in t["orders"]:
+                        if t["max_rate"] is not None and t["max_rate"] != 0:
+                            max_profit_o = round(
+                                ((t["max_rate"] - o["safe_price"]) / o["safe_price"]) * 100, 2
+                            )
+                            max_profits.append(max_profit_o)
+                    if max_profits:
+                        max_profit = round(sum(max_profits) / len(max_profits), 2)
 
                 row_data.append(
                     (

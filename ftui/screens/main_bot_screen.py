@@ -400,7 +400,7 @@ class MainBotScreen(TimedScreen):
 
             stop_profit = "--- "
             if t["stop_loss_abs"] is not None and t["stop_loss_abs"] != 0:
-                stop_profit = t['stop_loss_pct']
+                stop_profit = round(t['stop_loss_pct'], 2)
             stp_txt = (
                 f"{t['stop_loss_abs']} [red]({stop_profit}%)"
                 if stop_profit <= 0
