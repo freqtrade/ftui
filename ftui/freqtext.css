@@ -380,17 +380,27 @@ ListView Label {
 }
 
 #info {
-    width: auto;
+    width: 80%;
+}
+
+#info-dialog-container {
+    width: 100%;
+    height: 80%;
+    border-bottom: white;
 }
 
 #trade-info-left {
-    dock: left;
-    width: 50%;
+    width: 80%;
 }
 
 #trade-info-right {
-    dock: right;
-    width: 50%;
+    width: 80%;
+}
+
+#trade-info-orders {
+    padding-top: 1;
+    column-span: 2;
+    height: auto;
 }
 
 #trade-info-footer {
@@ -404,8 +414,9 @@ ListView Label {
     border: rgba(255, 255, 255, 0.3);
     padding: 1 2;
     layout: grid;
-    grid-size: 3;
-    grid-columns: 2fr 1fr 1fr;
+    grid-size: 2 2;
+    grid-rows: auto auto;
+    grid-columns: 1fr 1fr;
 }
 
 #dt-dialog {

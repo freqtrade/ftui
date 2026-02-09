@@ -1,6 +1,6 @@
 import pandas as pd
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import (
     DataTable,
@@ -50,8 +50,9 @@ class TradeInfoScreen(BasicModal):
 
     def compose(self) -> ComposeResult:
         trade_info = self.client.get_trade_info(self.trade_id)
-        main, two = self.build_trade_info(trade_info)
+        main, two, three = self.build_trade_info(trade_info)
         with Container(main, two, id="info-dialog"):
+            yield Container(three, id="trade-info-orders")
             with Container(id="trade-info-footer"):
                 yield Static("[Esc] to close")
 
@@ -86,13 +87,25 @@ class TradeInfoScreen(BasicModal):
             f"{trade_info['initial_stop_loss_pct']} ({trade_info['initial_stop_loss_abs']})\n"
         )
 
-        # three_text = (7
-        #     # f"[b]Orders:  {self.trade_id}\n"
-        #     ", ".join(list(trade_info.keys()))
-        # )
+        three_text = (
+            f"Orders [{len(trade_info['orders'])}]:\n"
+        )
+
+        for i, o in enumerate(trade_info["orders"], start=1):
+            o_ts = pd.to_datetime(o['order_filled_timestamp'], unit="ms", utc=True).strftime('%Y-%m-%d %H:%M:%S (UTC)')
+
+            if o['ft_order_side'] == 'buy':
+                o_side = f"[green]{o['ft_order_side']}[/green]"
+            else:
+                o_side = f"[red]{o['ft_order_side']}[/red]"
+
+            three_text += (
+                f"({i}) {o_ts} [b]{o_side}[/b] for {o['safe_price']} | "
+                f"{o['amount']} | {o['ft_order_tag']}\n"
+            )
 
         main = Static(main_text, classes="box", id="trade-info-left")
         two = Static(two_text, classes="box", id="trade-info-right")
-        # three = Static(three_text, classes="box", id="three")
+        three = Static(three_text, classes="box", id="trade-info-orders")
 
-        return main, two
+        return main, two, three
